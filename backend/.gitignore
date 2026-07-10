@@ -1,0 +1,18 @@
+# SprintMind AI Backend gitignore
+
+# Caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local Configurations & Secrets
+.env
+.env*.local
+
+# Virtual Environments
+venv/
+.venv/
+env/

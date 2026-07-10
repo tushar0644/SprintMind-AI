@@ -1,0 +1,1 @@
+# SprintMind AI Core Package
