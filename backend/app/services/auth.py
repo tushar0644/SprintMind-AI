@@ -23,12 +23,16 @@ async def get_current_user(token: str = Depends(get_token)):
     Verifies the JWT authenticity by calling Supabase auth.get_user.
     Returns the Supabase Auth user record.
     """
-    if token == "mock-token":
+    # Mock bypass — available in development/testing only.
+    # Disabled in production so Bearer mock-token never grants access.
+    from app.core.config import settings
+    if token == "mock-token" and settings.ENVIRONMENT != "production":
         from unittest.mock import MagicMock
         mock_user = MagicMock()
         mock_user.id = "dbd1fa6e-21ef-42f2-89b5-c0f2ee8cf09c"
         mock_user.email = "user-test@sprintmind.ai"
         return mock_user
+
 
     try:
         user_response = supabase.auth.get_user(token)

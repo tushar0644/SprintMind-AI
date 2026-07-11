@@ -1,6 +1,28 @@
+# SprintMind AI Backend — Production Dependencies
+# Install: pip install -r requirements.txt
+
+# Core framework
 fastapi>=0.111.0
 uvicorn>=0.30.1
-pydantic>=2.7.3
-python-dotenv>=1.0.1
-supabase>=2.5.1
+
+# Data validation
+pydantic[email]>=2.7.3
 pydantic-settings>=2.2.1
+
+# Environment configuration
+python-dotenv>=1.0.1
+
+# HTTP client (required by supabase SDK)
+httpx>=0.27.0
+
+# FastAPI form data / file upload support
+python-multipart>=0.0.9
+
+# Supabase client SDK
+supabase>=2.5.1
+
+# Google Gemini AI SDK
+google-generativeai>=0.8.0
+
+# Background task scheduler (automation module)
+APScheduler>=3.10.0

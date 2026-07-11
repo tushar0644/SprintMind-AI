@@ -1,3 +1,1 @@
-from fastapi import APIRouter
-
-router = APIRouter(prefix="/tasks", tags=["Tasks"])
+from app.tasks.router import router  # noqa: F401 — re-export for gateway

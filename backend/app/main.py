@@ -31,14 +31,15 @@ async def lifespan(app: FastAPI):
     logger.info(f"Shutting down {settings.APP_TITLE} API Gateway and closing active streams...")
 
 # 2. Instantiate core FastAPI Application Gateway
+_is_production = settings.ENVIRONMENT == "production"
 app = FastAPI(
     title=settings.APP_TITLE,
     description=settings.APP_DESCRIPTION,
     version=settings.APP_VERSION,
     lifespan=lifespan,
-    docs_url="/docs",      # Enables Swagger UI
-    redoc_url="/redoc",    # Enables ReDoc
-    openapi_url="/openapi.json"
+    docs_url=None if _is_production else "/docs",
+    redoc_url=None if _is_production else "/redoc",
+    openapi_url=None if _is_production else "/openapi.json"
 )
 
 # 3. Mount Middlewares
