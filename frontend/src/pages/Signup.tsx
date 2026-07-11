@@ -1,22 +1,41 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { supabase } from "../services/supabase";
+import { Link } from "react-router-dom";
+import axios from "axios";
+import { config } from "../config";
 
 export const Signup: React.FC = () => {
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState("developer");
   const [localLoading, setLocalLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const navigate = useNavigate();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password || !displayName) {
+    
+    // Client-side validations
+    if (!email || !password || !displayName || !confirmPassword) {
       setLocalError("Please fill in all registration fields.");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setLocalError("Please enter a valid email address.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setLocalError("Password must be at least 6 characters.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setLocalError("Passwords do not match.");
       return;
     }
 
@@ -25,28 +44,17 @@ export const Signup: React.FC = () => {
     setSuccessMsg(null);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const res = await axios.post(`${config.apiUrl}/api/auth/signup`, {
         email,
         password,
-        options: {
-          data: {
-            display_name: displayName,
-            role: role,
-          },
-        },
+        display_name: displayName,
+        role: role,
       });
 
-      if (error) {
-        setLocalError(error.message);
-      } else if (data.user && data.session === null) {
-        // Verification email sent configuration
-        setSuccessMsg("Registration successful! Check your inbox for the email verification link.");
-      } else {
-        // Direct session creation (if email verification is disabled)
-        navigate("/dashboard", { replace: true });
-      }
+      setSuccessMsg(res.data.message || "Registration successful! Check your inbox for the email verification link.");
     } catch (err: any) {
-      setLocalError("An unexpected errors occurred during registration.");
+      const errMsg = err.response?.data?.detail || "An unexpected error occurred during registration.";
+      setLocalError(errMsg);
     } finally {
       setLocalLoading(false);
     }
@@ -78,7 +86,7 @@ export const Signup: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleSignUp} className="space-y-4">
+        <form onSubmit={handleSignUp} noValidate className="space-y-4">
           <div>
             <label className="block text-xs font-semibold uppercase text-zinc-400 mb-1.5">Full Name</label>
             <input
@@ -115,6 +123,19 @@ export const Signup: React.FC = () => {
               disabled={localLoading}
               className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors disabled:opacity-50"
               minLength={6}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold uppercase text-zinc-400 mb-1.5">Confirm Password</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="••••••••"
+              disabled={localLoading}
+              className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors disabled:opacity-50"
               required
             />
           </div>
@@ -161,3 +182,5 @@ export const Signup: React.FC = () => {
     </div>
   );
 };
+
+export default Signup;

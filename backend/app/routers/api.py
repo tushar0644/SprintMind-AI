@@ -11,8 +11,8 @@ from app.routers import (
     reports,
 )
 
-# Root v1 api gateway router mapping submodules modularly
-api_router = APIRouter(prefix="/api/v1")
+# Root api gateway router mapping submodules modularly
+api_router = APIRouter(prefix="/api")
 
 # Mount plug-and-play feature modules
 api_router.include_router(auth.router)

@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import axios from "axios";
 import { supabase } from "../services/supabase";
 import { useAuthStore } from "../store/authStore";
+import { config } from "../config";
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -18,8 +20,21 @@ export const Login: React.FC = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Client-side validations
     if (!email || !password) {
-      setLocalError("Please fill in all credentials fields.");
+      setLocalError("Please fill in all fields.");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setLocalError("Please enter a valid email address.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setLocalError("Password must be at least 6 characters.");
       return;
     }
     
@@ -27,20 +42,31 @@ export const Login: React.FC = () => {
     setLocalError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const res = await axios.post(`${config.apiUrl}/api/auth/login`, {
         email,
         password,
       });
 
-      if (error) {
-        setLocalError(error.message);
+      const { session } = res.data;
+      if (session) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        });
+
+        if (sessionError) {
+          setLocalError(sessionError.message);
+        } else {
+          // Synchronize Zustand session and user state
+          await initialize();
+          navigate(from, { replace: true });
+        }
       } else {
-        // Synchronize Zustand session and user state
-        await initialize();
-        navigate(from, { replace: true });
+        setLocalError("Authentication failed. No active session returned.");
       }
     } catch (err: any) {
-      setLocalError("An unexpected authorization error occurred.");
+      const errMsg = err.response?.data?.detail || "An unexpected authorization error occurred.";
+      setLocalError(errMsg);
     } finally {
       setLocalLoading(false);
     }
@@ -63,7 +89,7 @@ export const Login: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleSignIn} className="space-y-4">
+        <form onSubmit={handleSignIn} noValidate className="space-y-4">
           <div>
             <label className="block text-xs font-semibold uppercase text-zinc-400 mb-1.5">Email Address</label>
             <input

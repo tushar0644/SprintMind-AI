@@ -26,6 +26,20 @@ class Settings(BaseSettings):
         description="Allowed Cross-Origin Resource Sharing domains"
     )
 
+    # Infrastructure Credentials Mappings
+    SUPABASE_URL: str = Field(
+        default="https://dummy.supabase.co",
+        description="Supabase project database URL endpoint"
+    )
+    SUPABASE_SERVICE_ROLE_KEY: str = Field(
+        default="dummy-service-role-key",
+        description="Supabase backend service role secret key"
+    )
+    GEMINI_API_KEY: str = Field(
+        default="dummy-gemini-key",
+        description="Google Gemini AI developer credentials api key"
+    )
+
     # Configuration loading definitions
     model_config = SettingsConfigDict(
         env_file=".env",

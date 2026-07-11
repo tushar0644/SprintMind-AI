@@ -8,6 +8,57 @@ import { ForgotPassword } from "./pages/ForgotPassword";
 import { ResetPassword } from "./pages/ResetPassword";
 import { Dashboard } from "./pages/Dashboard";
 import { supabase } from "./services/supabase";
+import { isSupabaseConfigured } from "./config";
+
+// Custom Error Boundary Component to prevent application blank screens
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("[ErrorBoundary] Caught unhandled rendering exception:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-zinc-50 p-6">
+          <div className="max-w-xl w-full border border-red-500/20 bg-zinc-900/30 rounded-xl p-8 text-center shadow-lg">
+            <div className="w-16 h-16 bg-red-600/10 border border-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            
+            <h1 className="text-2xl font-extrabold text-zinc-50 mb-2">Something went wrong</h1>
+            <p className="text-sm text-zinc-400 mb-6 font-mono">
+              The application encountered a critical runtime error and was unable to proceed.
+            </p>
+
+            <div className="border border-zinc-800 bg-zinc-950/50 rounded-lg p-4 text-left font-mono text-xs text-red-400 mb-6 max-h-40 overflow-auto select-text">
+              {this.state.error?.toString() || "Unknown Error"}
+            </div>
+
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-50 rounded-lg text-sm font-medium transition-colors"
+            >
+              Reload Application
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 export const App: React.FC = () => {
   const { initialize, setSession, setUser, fetchUserProfile } = useAuthStore();
@@ -16,9 +67,13 @@ export const App: React.FC = () => {
     // 1. Initial session checking on application load
     initialize();
 
-    // 2. Set up realtime session state change listeners
+    // 2. Set up realtime session state change listeners if configured
+    if (!isSupabaseConfigured()) {
+      return;
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (_event, session) => {
         if (session) {
           setSession(session);
           setUser(session.user);
@@ -36,29 +91,31 @@ export const App: React.FC = () => {
   }, [initialize, setSession, setUser, fetchUserProfile]);
 
   return (
-    <Router>
-      <Routes>
-        {/* Public Auth Routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
+    <ErrorBoundary>
+      <Router>
+        <Routes>
+          {/* Public Auth Routes (Redirects to dashboard directly in Local Development Mode) */}
+          <Route path="/login" element={isSupabaseConfigured() ? <Login /> : <Navigate to="/dashboard" replace />} />
+          <Route path="/signup" element={isSupabaseConfigured() ? <Signup /> : <Navigate to="/dashboard" replace />} />
+          <Route path="/forgot-password" element={isSupabaseConfigured() ? <ForgotPassword /> : <Navigate to="/dashboard" replace />} />
+          <Route path="/reset-password" element={isSupabaseConfigured() ? <ResetPassword /> : <Navigate to="/dashboard" replace />} />
 
-        {/* Protected Dashboard Route */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
+          {/* Protected Dashboard Route */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Fallbacks */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-    </Router>
+          {/* Fallbacks */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Router>
+    </ErrorBoundary>
   );
 };
 

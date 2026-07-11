@@ -1,6 +1,7 @@
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
+import { isSupabaseConfigured } from "../config";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -23,6 +24,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         </div>
       </div>
     );
+  }
+
+  // Bypass route protection if running in Local Development Mode without Supabase
+  if (!isSupabaseConfigured()) {
+    return <>{children}</>;
   }
 
   // Redirect to login if user is not authenticated

@@ -22,3 +22,15 @@ def test_health_check_status():
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "healthy"
+
+def test_supabase_connection_verification(monkeypatch):
+    """
+    Verifies that the verify_supabase_connection helper identifies configurations.
+    """
+    from app.core.config import settings
+    monkeypatch.setattr(settings, "SUPABASE_URL", "https://dummy.supabase.co")
+    monkeypatch.setattr(settings, "SUPABASE_SERVICE_ROLE_KEY", "dummy-service-role-key")
+
+    from app.database.client import verify_supabase_connection
+    # Should identify placeholders and return False
+    assert verify_supabase_connection() is False

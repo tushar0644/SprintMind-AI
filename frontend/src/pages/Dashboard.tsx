@@ -1,5 +1,7 @@
 import React from "react";
 import { useAuthStore } from "../store/authStore";
+import { isSupabaseConfigured } from "../config";
+import { InfrastructureStatus } from "../components/InfrastructureStatus";
 
 export const Dashboard: React.FC = () => {
   const { profile, logout } = useAuthStore();
@@ -16,17 +18,23 @@ export const Dashboard: React.FC = () => {
           <span className="text-xs px-2 py-1 bg-zinc-800 border border-zinc-700 text-zinc-400 rounded-md font-mono capitalize">
             {profile?.role || "user"}
           </span>
-          <button
-            onClick={logout}
-            className="px-3.5 py-1.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:text-zinc-50 text-zinc-300 text-sm font-medium rounded-lg transition-colors"
-          >
-            Sign Out
-          </button>
+          {isSupabaseConfigured() ? (
+            <button
+              onClick={logout}
+              className="px-3.5 py-1.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:text-zinc-50 text-zinc-300 text-sm font-medium rounded-lg transition-colors"
+            >
+              Sign Out
+            </button>
+          ) : (
+            <span className="text-xs px-2.5 py-1.5 bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 rounded-md font-mono font-medium">
+              Offline Mode
+            </span>
+          )}
         </div>
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 flex items-center justify-center p-6">
+      <main className="flex-1 flex flex-col items-center justify-center p-6 space-y-6">
         <div className="max-w-xl w-full border border-zinc-800 bg-zinc-900/30 rounded-xl p-8 text-center shadow-lg">
           <div className="w-20 h-20 bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold">
             {profile?.display_name ? profile.display_name.charAt(0).toUpperCase() : "U"}
@@ -51,11 +59,14 @@ export const Dashboard: React.FC = () => {
               <span className="text-zinc-500">Session Status:</span>
               <span className="col-span-2 text-emerald-400 flex items-center gap-1.5 font-medium">
                 <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
-                Active & Persistent
+                {isSupabaseConfigured() ? "Active & Persistent" : "Local Development Mode (Mock)"}
               </span>
             </div>
           </div>
         </div>
+
+        {/* Temporary Infrastructure Status Panel */}
+        <InfrastructureStatus />
       </main>
     </div>
   );

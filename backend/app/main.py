@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.config.logging import logger
 from app.utils.health import get_root_status, get_health_status
-# from app.routers.api import api_router
+from app.routers.api import api_router
 
 # 1. Lifespan Event Context Handlers
 @asynccontextmanager
@@ -118,5 +118,5 @@ def read_health():
 # - Analytics
 # - Automation
 #
-# app.include_router(api_router)
+app.include_router(api_router)
 
