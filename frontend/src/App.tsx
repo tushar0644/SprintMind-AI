@@ -1,14 +1,13 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { useAuthStore } from "./store/authStore";
+import { AuthProvider } from "./components/AuthProvider";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { PublicRoute } from "./components/PublicRoute";
 import { Login } from "./pages/Login";
 import { Signup } from "./pages/Signup";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { ResetPassword } from "./pages/ResetPassword";
 import { Dashboard } from "./pages/Dashboard";
-import { supabase } from "./services/supabase";
-import { isSupabaseConfigured } from "./config";
 
 // Custom Error Boundary Component to prevent application blank screens
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
@@ -61,60 +60,33 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 }
 
 export const App: React.FC = () => {
-  const { initialize, setSession, setUser, fetchUserProfile } = useAuthStore();
-
-  useEffect(() => {
-    // 1. Initial session checking on application load
-    initialize();
-
-    // 2. Set up realtime session state change listeners if configured
-    if (!isSupabaseConfigured()) {
-      return;
-    }
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (session) {
-          setSession(session);
-          setUser(session.user);
-          await fetchUserProfile(session.access_token);
-        } else {
-          setSession(null);
-          setUser(null);
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [initialize, setSession, setUser, fetchUserProfile]);
-
   return (
     <ErrorBoundary>
-      <Router>
-        <Routes>
-          {/* Public Auth Routes (Redirects to dashboard directly in Local Development Mode) */}
-          <Route path="/login" element={isSupabaseConfigured() ? <Login /> : <Navigate to="/dashboard" replace />} />
-          <Route path="/signup" element={isSupabaseConfigured() ? <Signup /> : <Navigate to="/dashboard" replace />} />
-          <Route path="/forgot-password" element={isSupabaseConfigured() ? <ForgotPassword /> : <Navigate to="/dashboard" replace />} />
-          <Route path="/reset-password" element={isSupabaseConfigured() ? <ResetPassword /> : <Navigate to="/dashboard" replace />} />
+      <AuthProvider>
+        <Router>
+          <Routes>
+            {/* Public Auth Routes */}
+            <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+            <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+            <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+            <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
 
-          {/* Protected Dashboard Route */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
+            {/* Protected Dashboard Route */}
+            <Route
+              path="/dashboard"
+              element = {
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Fallbacks */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </Router>
+            {/* Fallbacks */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </Router>
+      </AuthProvider>
     </ErrorBoundary>
   );
 };
