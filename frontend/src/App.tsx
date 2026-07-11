@@ -9,6 +9,8 @@ import { ForgotPassword } from "./pages/ForgotPassword";
 import { ResetPassword } from "./pages/ResetPassword";
 import { Verify } from "./pages/Verify";
 import { Dashboard } from "./pages/Dashboard";
+import { Projects } from "./features/projects/pages/Projects";
+import { Tasks } from "./features/tasks/pages/Tasks";
 
 // Custom Error Boundary Component to prevent application blank screens
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
@@ -79,6 +81,22 @@ export const App: React.FC = () => {
               element = {
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/projects"
+              element = {
+                <ProtectedRoute>
+                  <Projects />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tasks"
+              element = {
+                <ProtectedRoute>
+                  <Tasks />
                 </ProtectedRoute>
               }
             />
