@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { supabase } from "../services/supabase";
+import axios from "axios";
+import { config } from "../config";
 
 export const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -15,26 +16,29 @@ export const ForgotPassword: React.FC = () => {
       return;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setLocalError("Please enter a valid email address.");
+      return;
+    }
+
     setLocalLoading(true);
     setLocalError(null);
     setSuccessMsg(null);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+      const res = await axios.post(`${config.apiUrl}/api/auth/forgot-password`, {
+        email,
       });
-
-      if (error) {
-        setLocalError(error.message);
-      } else {
-        setSuccessMsg("Recovery email sent successfully. Check your inbox for instructions.");
-      }
+      setSuccessMsg(res.data.message || "Recovery email sent successfully. Check your inbox for instructions.");
     } catch (err: any) {
-      setLocalError("An unexpected error occurred.");
+      const errMsg = err.response?.data?.detail || "An unexpected error occurred.";
+      setLocalError(errMsg);
     } finally {
       setLocalLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-zinc-50 p-6">
@@ -62,7 +66,7 @@ export const ForgotPassword: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleResetRequest} className="space-y-4">
+        <form onSubmit={handleResetRequest} noValidate className="space-y-4">
           <div>
             <label className="block text-xs font-semibold uppercase text-zinc-400 mb-1.5">Email Address</label>
             <input

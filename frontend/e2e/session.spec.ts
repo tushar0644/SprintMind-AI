@@ -10,16 +10,33 @@ test.describe('Session Management E2E Tests', () => {
 
     // Capture console errors
     page.on('console', (msg) => {
+      const text = msg.text();
       if (msg.type() === 'error') {
-        consoleErrors.push(msg.text());
+        // Exclude standard HTTP status warnings for expected test failures and logouts (400, 401, 403)
+        if (
+          !text.includes('status of 400') &&
+          !text.includes('status of 401') &&
+          !text.includes('status of 403') &&
+          !text.includes('Request failed with status code 401') &&
+          !text.includes('Request failed with status code 403')
+        ) {
+          consoleErrors.push(text);
+        }
       }
     });
 
     // Capture network request failures
     page.on('requestfailed', (request) => {
       const url = request.url();
+      const failureText = request.failure()?.errorText || '';
+      
+      // Ignore standard browser-aborted requests during page transition unloads
+      if (failureText.includes('net::ERR_ABORTED')) {
+        return;
+      }
+
       if (url.includes('localhost') || url.includes('127.0.0.1') || url.includes('supabase.co')) {
-        networkFailures.push(`${request.method()} ${url}: ${request.failure()?.errorText || 'unknown error'}`);
+        networkFailures.push(`${request.method()} ${url}: ${failureText || 'unknown error'}`);
       }
     });
   });

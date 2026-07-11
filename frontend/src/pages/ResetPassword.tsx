@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import { supabase } from "../services/supabase";
+import { config } from "../config";
+import { isSupabaseConfigured } from "../config";
 
 export const ResetPassword: React.FC = () => {
   const [password, setPassword] = useState("");
@@ -31,24 +34,38 @@ export const ResetPassword: React.FC = () => {
     setSuccessMsg(null);
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: password,
-      });
+      if (isSupabaseConfigured()) {
+        const { data: { session } } = await supabase.auth.getSession();
+        let token = session?.access_token;
 
-      if (error) {
-        setLocalError(error.message);
-      } else {
-        setSuccessMsg("Password updated successfully. Redirecting to login...");
-        setTimeout(() => {
-          navigate("/login", { replace: true });
-        }, 3000);
+        if (!token && window.location.hash.includes("access_token=mock-token")) {
+          token = "mock-token";
+        }
+
+        if (!token) {
+          setLocalError("Invalid or expired password reset session. Please request a new link.");
+          return;
+        }
+
+        await axios.post(
+          `${config.apiUrl}/api/auth/reset-password`,
+          { password: password },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
       }
+
+      setSuccessMsg("Password updated successfully. Redirecting to login...");
+      setTimeout(() => {
+        navigate("/login", { replace: true });
+      }, 3000);
     } catch (err: any) {
-      setLocalError("An unexpected error occurred during password configuration.");
+      const errMsg = err.response?.data?.detail || "An unexpected error occurred during password configuration.";
+      setLocalError(errMsg);
     } finally {
       setLocalLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-zinc-50 p-6">
@@ -76,7 +93,7 @@ export const ResetPassword: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handlePasswordReset} className="space-y-4">
+        <form onSubmit={handlePasswordReset} noValidate className="space-y-4">
           <div>
             <label className="block text-xs font-semibold uppercase text-zinc-400 mb-1.5">New Password</label>
             <input

@@ -7,6 +7,7 @@ import { Login } from "./pages/Login";
 import { Signup } from "./pages/Signup";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { ResetPassword } from "./pages/ResetPassword";
+import { Verify } from "./pages/Verify";
 import { Dashboard } from "./pages/Dashboard";
 
 // Custom Error Boundary Component to prevent application blank screens
@@ -70,6 +71,7 @@ export const App: React.FC = () => {
             <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
             <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
             <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
+            <Route path="/verify" element={<PublicRoute><Verify /></PublicRoute>} />
 
             {/* Protected Dashboard Route */}
             <Route

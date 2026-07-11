@@ -208,3 +208,80 @@ def test_login_success():
         assert data["user"]["display_name"] == "Test User"
         assert data["user"]["role"] == "developer"
 
+def test_forgot_password_validation_and_success():
+    """
+    Verifies that requesting password recovery validates inputs and returns success.
+    """
+    # Invalid email validation
+    response = client.post("/api/auth/forgot-password", json={"email": "bad-email"})
+    assert response.status_code == 422
+
+    # Success recovery request (mocked test email prefix)
+    response = client.post("/api/auth/forgot-password", json={"email": "user-test@sprintmind.ai"})
+    assert response.status_code == 200
+    assert "sent successfully" in response.json()["message"]
+
+def test_reset_password_unauthorized_and_success():
+    """
+    Verifies that password reset requires authentication and updates password successfully.
+    """
+    # Requires Bearer Token
+    response = client.post("/api/auth/reset-password", json={"password": "newpassword123"})
+    assert response.status_code == 401
+
+    # Success reset password when authenticated
+    mock_user = type("MockUser", (), {"id": "dbd1fa6e-21ef-42f2-89b5-c0f2ee8cf000"})
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+
+    try:
+        with patch("app.routers.auth.supabase.auth.admin.update_user_by_id") as mock_update:
+            response = client.post("/api/auth/reset-password", json={"password": "newpassword123"}, headers={"Authorization": "Bearer mock-token"})
+            assert response.status_code == 200
+            assert "updated" in response.json()["message"]
+            mock_update.assert_called_once_with("dbd1fa6e-21ef-42f2-89b5-c0f2ee8cf000", {"password": "newpassword123"})
+    finally:
+        app.dependency_overrides.clear()
+
+def test_verify_otp_validation_and_success():
+    """
+    Verifies that verifying OTP validates inputs and returns session details.
+    """
+    # Validation errors
+    response = client.post("/api/auth/verify-otp", json={"email": "bad-email", "token": "123"})
+    assert response.status_code == 422
+
+    # Success OTP verification (mocked test email prefix)
+    mock_profile_result = type("MockResult", (), {
+        "data": [{
+            "id": "dbd1fa6e-21ef-42f2-89b5-c0f2ee8cf09c",
+            "email": "user-test@sprintmind.ai",
+            "display_name": "E2E Verified User",
+            "avatar_url": None,
+            "role": "developer",
+            "created_at": "2026-07-11T12:00:00Z",
+            "updated_at": "2026-07-11T12:00:00Z"
+        }]
+    })
+
+    with patch("app.routers.auth.supabase.table") as mock_table:
+        mock_table.return_value.select.return_value.eq.return_value.execute.return_value = mock_profile_result
+        
+        response = client.post("/api/auth/verify-otp", json={
+            "email": "user-test@sprintmind.ai",
+            "token": "123456",
+            "type": "signup"
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["session"]["access_token"] == "mock-verified-access-token"
+        assert data["user"]["display_name"] == "E2E Verified User"
+
+def test_resend_verification_success():
+    """
+    Verifies that requesting a verification email resends it successfully.
+    """
+    response = client.post("/api/auth/resend-verification", json={"email": "user-test@sprintmind.ai"})
+    assert response.status_code == 200
+    assert "resent successfully" in response.json()["message"]
+
+

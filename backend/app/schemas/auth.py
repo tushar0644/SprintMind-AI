@@ -93,3 +93,68 @@ class SignupResponse(BaseModel):
     role: str
     message: str
 
+class ForgotPasswordRequest(BaseModel):
+    """
+    Validation schema for requesting a password recovery email.
+    """
+    email: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        email_regex = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+        if not re.match(email_regex, v):
+            raise ValueError("Invalid email format.")
+        return v
+
+class ResetPasswordRequest(BaseModel):
+    """
+    Validation schema for updating/resetting a user's password.
+    """
+    password: str
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if len(v) < 6:
+            raise ValueError("Password must be at least 6 characters.")
+        return v
+
+class VerifyOtpRequest(BaseModel):
+    """
+    Validation schema for verifying a signup or recovery OTP code.
+    """
+    email: str
+    token: str
+    type: str = "signup"
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        email_regex = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+        if not re.match(email_regex, v):
+            raise ValueError("Invalid email format.")
+        return v
+
+    @field_validator("token")
+    @classmethod
+    def validate_token(cls, v: str) -> str:
+        if len(v) < 6:
+            raise ValueError("Token code must be at least 6 characters.")
+        return v
+
+class ResendVerificationRequest(BaseModel):
+    """
+    Validation schema for requesting another registration validation email.
+    """
+    email: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        email_regex = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+        if not re.match(email_regex, v):
+            raise ValueError("Invalid email format.")
+        return v
+
+
