@@ -210,3 +210,82 @@ def test_task_ownership_denied():
         assert client.delete(f"/api/tasks/{task_id}").status_code == 403
     finally:
         app.dependency_overrides[get_current_user] = lambda: MockUser()
+
+def test_task_listing_query_options():
+    """
+    Verifies searching, filtering, sorting, pagination, pagination headers, and request ID.
+    """
+    # 1. Create a project
+    proj_res = client.post("/api/projects", json={"name": "Query Options Project"})
+    project_id = proj_res.json()["id"]
+
+    # 2. Create multiple tasks with distinct properties
+    tasks_to_create = [
+        {"title": "Authentication Middleware", "description": "JWT verify.", "status": "todo", "priority": "high"},
+        {"title": "Database Schema Setup", "description": "Migration files.", "status": "in_progress", "priority": "medium"},
+        {"title": "Frontend Task Card", "description": "Archive logic.", "status": "done", "priority": "low"},
+        {"title": "Analytics Dashboard", "description": "Charts rendering.", "status": "todo", "priority": "medium"},
+        {"title": "API Documentation", "description": "OpenAPI spec.", "status": "in_progress", "priority": "low"},
+    ]
+    for task in tasks_to_create:
+        task["project_id"] = project_id
+        res = client.post("/api/tasks", json=task)
+        assert res.status_code == 201
+
+    # 3. Test basic listing & X-Total-Count header / X-Request-ID header
+    list_res = client.get(f"/api/tasks?project_id={project_id}")
+    assert list_res.status_code == 200
+    assert "X-Request-ID" in list_res.headers
+    assert list_res.headers["X-Total-Count"] == "5"
+    assert len(list_res.json()) == 5
+
+    # 4. Test Filtering by status
+    todo_res = client.get(f"/api/tasks?project_id={project_id}&status=todo")
+    assert todo_res.status_code == 200
+    assert todo_res.headers["X-Total-Count"] == "2"
+    assert len(todo_res.json()) == 2
+    assert all(t["status"] == "todo" for t in todo_res.json())
+
+    # 5. Test Filtering by priority
+    med_res = client.get(f"/api/tasks?project_id={project_id}&priority=medium")
+    assert med_res.status_code == 200
+    assert med_res.headers["X-Total-Count"] == "2"
+    assert len(med_res.json()) == 2
+    assert all(t["priority"] == "medium" for t in med_res.json())
+
+    # 6. Test Search (title/description)
+    search_res = client.get(f"/api/tasks?project_id={project_id}&q=schema")
+    assert search_res.status_code == 200
+    assert search_res.headers["X-Total-Count"] == "1"
+    assert len(search_res.json()) == 1
+    assert search_res.json()[0]["title"] == "Database Schema Setup"
+
+    # 7. Test Sorting (by title asc)
+    sort_res = client.get(f"/api/tasks?project_id={project_id}&sort_by=title&sort_order=asc")
+    assert sort_res.status_code == 200
+    titles = [t["title"] for t in sort_res.json()]
+    assert titles == sorted(titles, key=lambda s: s.lower())
+
+    # 8. Test Sorting (by title desc)
+    sort_res_desc = client.get(f"/api/tasks?project_id={project_id}&sort_by=title&sort_order=desc")
+    assert sort_res_desc.status_code == 200
+    titles_desc = [t["title"] for t in sort_res_desc.json()]
+    assert titles_desc == sorted(titles_desc, key=lambda s: s.lower(), reverse=True)
+
+    # 9. Test Pagination (page=1, limit=2)
+    pag_res_1 = client.get(f"/api/tasks?project_id={project_id}&page=1&limit=2")
+    assert pag_res_1.status_code == 200
+    assert pag_res_1.headers["X-Total-Count"] == "5"
+    assert len(pag_res_1.json()) == 2
+
+    # 10. Test Pagination (page=3, limit=2)
+    pag_res_3 = client.get(f"/api/tasks?project_id={project_id}&page=3&limit=2")
+    assert pag_res_3.status_code == 200
+    assert pag_res_3.headers["X-Total-Count"] == "5"
+    assert len(pag_res_3.json()) == 1
+
+    # 11. Test standardized validation error and request_id key
+    invalid_res = client.post("/api/tasks", json={"project_id": project_id}) # missing title
+    assert invalid_res.status_code == 422
+    assert "request_id" in invalid_res.json()
+    assert "detail" in invalid_res.json()

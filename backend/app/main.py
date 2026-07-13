@@ -7,13 +7,17 @@
 
 import time
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+import uuid
+from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.encoders import jsonable_encoder
 # from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from app.core.config import settings
-from app.config.logging import logger
+from app.config.logging import logger, request_id_ctx_var
 from app.utils.health import get_root_status, get_health_status
 from app.routers.api import api_router
 
@@ -61,6 +65,10 @@ app.add_middleware(
 # Custom Http Request-Response Performance Logging Middleware
 @app.middleware("http")
 async def log_http_transactions(request: Request, call_next):
+    # Retrieve request ID from client or generate a new one
+    request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+    token = request_id_ctx_var.set(request_id)
+    
     start_time = time.time()
     logger.info(f"Incoming: {request.method} {request.url.path}")
     
@@ -71,6 +79,7 @@ async def log_http_transactions(request: Request, call_next):
             f"Finished: {request.method} {request.url.path} "
             f"-> Status: {response.status_code} [Latency: {duration_ms:.2f}ms]"
         )
+        response.headers["X-Request-ID"] = request_id
         return response
     except Exception as exc:
         duration_ms = (time.time() - start_time) * 1000
@@ -79,8 +88,37 @@ async def log_http_transactions(request: Request, call_next):
             f"-> Exception: {str(exc)} [Latency: {duration_ms:.2f}ms]"
         )
         raise exc
+    finally:
+        request_id_ctx_var.reset(token)
 
 # 4. Global Exception Handler Registry
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    """
+    Standardizes HTTP exceptions to return detail and request_id.
+    """
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "detail": jsonable_encoder(exc.detail),
+            "request_id": request_id_ctx_var.get()
+        },
+        headers=getattr(exc, "headers", None)
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """
+    Standardizes validation exceptions to return errors detail and request_id.
+    """
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "detail": jsonable_encoder(exc.errors()),
+            "request_id": request_id_ctx_var.get()
+        }
+    )
+
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """
@@ -90,7 +128,8 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     return JSONResponse(
         status_code=500,
         content={
-            "detail": "An unexpected server error occurred."
+            "detail": "An unexpected server error occurred.",
+            "request_id": request_id_ctx_var.get()
         }
     )
 

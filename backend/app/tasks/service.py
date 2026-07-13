@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from uuid import UUID
 from app.tasks.schemas import TaskCreate, TaskUpdate, TaskResponse
 from app.tasks.repository import TaskRepository
@@ -25,6 +25,33 @@ class TaskService:
         Fetch all tasks owned by a user across all projects.
         """
         return self.repository.get_all_by_owner(owner_id)
+
+    def list_tasks(
+        self,
+        owner_id: UUID,
+        project_id: Optional[UUID] = None,
+        search: Optional[str] = None,
+        status: Optional[str] = None,
+        priority: Optional[str] = None,
+        sort_by: Optional[str] = "created_at",
+        sort_order: Optional[str] = "asc",
+        page: Optional[int] = None,
+        limit: Optional[int] = None
+    ) -> Tuple[List[TaskResponse], int]:
+        """
+        List user tasks with optional search, filtering, sorting, and pagination.
+        """
+        return self.repository.list_tasks(
+            owner_id=owner_id,
+            project_id=project_id,
+            search=search,
+            status=status,
+            priority=priority,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            page=page,
+            limit=limit
+        )
 
     def create_task(self, owner_id: UUID, task_data: TaskCreate) -> TaskResponse:
         """

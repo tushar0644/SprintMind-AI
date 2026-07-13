@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from uuid import UUID, uuid4
 from datetime import datetime, timezone
 from app.database.client import supabase
@@ -72,6 +72,96 @@ class TaskRepository:
             return [TaskResponse.model_validate(t) for t in res.data]
         except Exception:
             return []
+
+    def list_tasks(
+        self,
+        owner_id: UUID,
+        project_id: Optional[UUID] = None,
+        search: Optional[str] = None,
+        status: Optional[str] = None,
+        priority: Optional[str] = None,
+        sort_by: Optional[str] = "created_at",
+        sort_order: Optional[str] = "asc",
+        page: Optional[int] = None,
+        limit: Optional[int] = None
+    ) -> Tuple[List[TaskResponse], int]:
+        owner_id = UUID(str(owner_id))
+
+        if self._is_mock_user(owner_id):
+            # Filtering
+            results = [
+                t for t in _MOCK_TASK_DB
+                if t.owner_id == owner_id and t.deleted_at is None
+            ]
+            if project_id:
+                proj_uuid = UUID(str(project_id))
+                results = [t for t in results if t.project_id == proj_uuid]
+            if status:
+                results = [t for t in results if t.status == status]
+            if priority:
+                results = [t for t in results if t.priority == priority]
+            if search:
+                s_lower = search.lower()
+                results = [
+                    t for t in results
+                    if s_lower in t.title.lower() or (t.description and s_lower in t.description.lower())
+                ]
+
+            total_count = len(results)
+
+            # Sorting
+            if sort_by:
+                reverse = (sort_order == "desc")
+                def get_sort_key(t):
+                    val = getattr(t, sort_by, None)
+                    if isinstance(val, datetime):
+                        return val.isoformat()
+                    return str(val or "").lower()
+                results = sorted(results, key=get_sort_key, reverse=reverse)
+
+            # Pagination
+            if page is not None and limit is not None:
+                start = (page - 1) * limit
+                end = start + limit
+                results = results[start:end]
+
+            return results, total_count
+
+        # Supabase database implementation
+        try:
+            query = (
+                supabase.table("tasks")
+                .select("*", count="exact")
+                .eq("owner_id", str(owner_id))
+                .is_("deleted_at", "null")
+            )
+            
+            if project_id:
+                query = query.eq("project_id", str(project_id))
+            if status:
+                query = query.eq("status", status)
+            if priority:
+                query = query.eq("priority", priority)
+            if search:
+                query = query.or_(f"title.ilike.%{search}%,description.ilike.%{search}%")
+
+            # Sorting
+            if sort_by:
+                desc = (sort_order == "desc")
+                query = query.order(sort_by, desc=desc)
+
+            # Pagination (range is inclusive: range(start, end))
+            if page is not None and limit is not None:
+                start = (page - 1) * limit
+                end = start + limit - 1
+                query = query.range(start, end)
+
+            res = query.execute()
+            tasks = [TaskResponse.model_validate(t) for t in res.data]
+            total_count = res.count if res.count is not None else len(tasks)
+            return tasks, total_count
+        except Exception:
+            return [], 0
 
     def create(self, owner_id: UUID, task_data: TaskCreate) -> TaskResponse:
         owner_id = UUID(str(owner_id))
