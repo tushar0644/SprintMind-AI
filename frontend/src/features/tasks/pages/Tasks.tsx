@@ -66,9 +66,17 @@ export const Tasks: React.FC = () => {
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | TaskStatus>("all");
 
+  const toastTimeoutRef = React.useRef<any>(null);
+
   const triggerToast = (msg: string) => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
     setSuccessToast(msg);
-    setTimeout(() => setSuccessToast(null), 3000);
+    toastTimeoutRef.current = setTimeout(() => {
+      setSuccessToast(null);
+      toastTimeoutRef.current = null;
+    }, 3000);
   };
 
   const resetForm = () => {
@@ -167,9 +175,9 @@ export const Tasks: React.FC = () => {
     try {
       await deleteTask(deletingTask.id);
       setDeletingTask(null);
-      triggerToast("Task deleted.");
+      triggerToast("Task archived successfully!");
     } catch {
-      setError("Failed to delete task.");
+      setError("Failed to archive task.");
     } finally {
       setSubmitLoading(false);
     }
@@ -476,53 +484,56 @@ export const Tasks: React.FC = () => {
         </div>
       )}
 
-      {/* ── Delete Confirm Modal ─────────────────────────────────────────── */}
+      {/* ── Archive Confirm Modal ─────────────────────────────────────────── */}
       {deletingTask && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
           <div
-            id="modal-delete-task"
-            className="bg-[#0c0c0e] border border-zinc-800/60 rounded-2xl shadow-2xl shadow-black/60 w-full max-w-sm p-6"
+            id="modal-archive-task"
+            className="bg-[#0c0c0e] border border-zinc-800/60 rounded-2xl shadow-2xl shadow-black/60 w-full max-w-sm p-6 text-center animate-scale-in"
           >
-            <div className="w-10 h-10 rounded-full bg-red-600/10 border border-red-500/15 text-red-400 flex items-center justify-center mx-auto mb-4">
-              <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="w-10 h-10 rounded-full bg-red-500/5 text-red-500 border border-red-500/10 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                 />
               </svg>
             </div>
-            <h3 className="text-sm font-bold text-zinc-100 text-center mb-1.5">Delete Task?</h3>
-            <p className="text-[10px] text-zinc-500 text-center mb-5 leading-relaxed">
-              "<span className="text-zinc-400">{deletingTask.title}</span>" will be permanently removed.
+            <h3 className="text-sm font-semibold text-zinc-200 mb-1.5 font-sans tracking-tight">Archive Task?</h3>
+            <p className="text-xs text-zinc-500 mb-6 max-w-[280px] mx-auto leading-relaxed">
+              Are you sure you want to archive <strong>{deletingTask.title}</strong>? This action can be undone by restoring status.
             </p>
-            <div className="flex gap-2">
+            <div className="flex items-center justify-center gap-2.5">
               <button
+                type="button"
                 onClick={() => setDeletingTask(null)}
-                className="flex-1 py-2 text-xs font-medium text-zinc-400 bg-zinc-900/40 hover:bg-zinc-900 border border-zinc-800 rounded-lg transition-all duration-150"
+                className="px-4 py-2 bg-zinc-900/50 hover:bg-zinc-900 border border-zinc-900 text-zinc-400 hover:text-zinc-200 text-xs font-semibold rounded-lg transition-all duration-200"
               >
                 Cancel
               </button>
               <button
-                id="btn-confirm-delete-task"
+                id="btn-confirm-archive-task"
+                type="button"
                 onClick={handleDeleteConfirm}
                 disabled={submitLoading}
-                className="flex-1 py-2 text-xs font-semibold text-zinc-50 bg-red-600 hover:bg-red-500 rounded-lg transition-all duration-150 disabled:opacity-50"
+                className="px-4 py-2 bg-red-600 hover:bg-red-500 active:bg-red-700 text-zinc-50 text-xs font-semibold rounded-lg shadow-lg hover:shadow-red-500/10 transition-all duration-200 border border-red-500/10"
               >
-                {submitLoading ? "Deleting…" : "Delete"}
+                {submitLoading ? "Archiving..." : "Yes, Archive"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Success Toast ────────────────────────────────────────────────── */}
+      {/* Redesigned Success Toast (Slide-in left accent) */}
       {successToast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 bg-[#0c0c0e] border border-emerald-500/20 rounded-xl shadow-xl shadow-black/40 animate-fade-in">
-          <div className="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <span className="text-xs font-medium text-zinc-200">{successToast}</span>
+        <div 
+          id="success-toast"
+          className="fixed bottom-6 right-6 border-l-4 border-emerald-500 bg-[#0c0c0e] text-emerald-400 px-4.5 py-3.5 rounded-r-lg shadow-2xl text-xs font-semibold flex items-center gap-2.5 animate-fade-in z-50 shadow-black/40"
+        >
+          <svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4" />
+          </svg>
+          <span>{successToast}</span>
         </div>
       )}
     </ProjectLayout>

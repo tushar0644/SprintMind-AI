@@ -78,6 +78,15 @@ class TaskRepository:
         project_id = UUID(str(task_data.project_id))
 
         if self._is_mock_user(owner_id):
+            # Check project existence in mock database
+            from app.projects.repository import _MOCK_DB
+            project_exists = any(
+                p.id == project_id and p.owner_id == owner_id and p.deleted_at is None
+                for p in _MOCK_DB
+            )
+            if not project_exists:
+                raise ValueError("Project not found or access denied.")
+
             new_task = TaskResponse(
                 id=uuid4(),
                 project_id=project_id,
@@ -92,6 +101,23 @@ class TaskRepository:
             )
             _MOCK_TASK_DB.append(new_task)
             return new_task
+
+        # Database verification: Check project existence and ownership
+        try:
+            proj_res = (
+                supabase.table("projects")
+                .select("id")
+                .eq("id", str(project_id))
+                .eq("owner_id", str(owner_id))
+                .is_("deleted_at", "null")
+                .execute()
+            )
+            if not proj_res.data:
+                raise ValueError("Project not found or access denied.")
+        except Exception as e:
+            if isinstance(e, ValueError):
+                raise e
+            raise ValueError("Failed to verify project ownership in database.")
 
         res = supabase.table("tasks").insert({
             "project_id": str(project_id),

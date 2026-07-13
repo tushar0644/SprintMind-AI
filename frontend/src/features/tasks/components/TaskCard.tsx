@@ -113,9 +113,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           </svg>
         </button>
         <button
-          id={`btn-delete-task-${task.id}`}
+          id={`btn-archive-task-${task.id}`}
           onClick={() => onDelete(task)}
-          title="Delete task"
+          title="Archive Task"
           className="p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-600/10 transition-all duration-150"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

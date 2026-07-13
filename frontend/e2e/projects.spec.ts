@@ -55,8 +55,18 @@ test.describe('Projects Page E2E Tests', () => {
     await page.goto('/projects');
     await expect(page.locator('h1:has-text("Projects")')).toBeVisible();
 
-    // Verify initially empty state
-    await expect(page.locator('text=No projects found')).toBeVisible();
+    // Wait for either the project list or empty state to be attached
+    await Promise.race([
+      page.waitForSelector('div.grid-cols-1', { state: 'attached', timeout: 5000 }).catch(() => {}),
+      page.waitForSelector('text=No projects found', { state: 'attached', timeout: 5000 }).catch(() => {})
+    ]);
+
+    // If projects exist, we skip asserting the empty state
+    const projectList = page.locator('div.grid-cols-1');
+    const projectListExists = await projectList.count();
+    if (projectListExists === 0) {
+      await expect(page.locator('text=No projects found')).toBeVisible();
+    }
 
     // --- CREATE TRANSITION ---
     // Click Create Project button trigger
@@ -77,7 +87,9 @@ test.describe('Projects Page E2E Tests', () => {
     // Verify modal closes and project is listed
     await expect(page.locator('h2:has-text("Create New Project")')).not.toBeVisible();
     await expect(page.locator(`text=${projectName}`)).toBeVisible();
-    await expect(page.locator('text=active')).toBeVisible();
+    
+    const projectCard = page.locator('div.border-zinc-900', { hasText: projectName });
+    await expect(projectCard.locator('text=active')).toBeVisible();
 
     // Verify success toast appears
     await expect(page.locator('#success-toast')).toBeVisible();
@@ -85,7 +97,7 @@ test.describe('Projects Page E2E Tests', () => {
 
     // --- EDIT TRANSITION ---
     // Click edit icon button
-    await page.click('button[title="Edit Project"]');
+    await projectCard.locator('button[title="Edit Project"]').click();
     await expect(page.locator('h2:has-text("Edit Project Settings")')).toBeVisible();
 
     // Update name and select archived
@@ -97,12 +109,14 @@ test.describe('Projects Page E2E Tests', () => {
     // Verify modal closes and status is updated
     await expect(page.locator('h2:has-text("Edit Project Settings")')).not.toBeVisible();
     await expect(page.locator(`text=${updatedName}`)).toBeVisible();
-    await expect(page.locator('text=archived')).toBeVisible();
+    
+    const updatedProjectCard = page.locator('div.border-zinc-900', { hasText: updatedName });
+    await expect(updatedProjectCard.locator('text=archived')).toBeVisible();
     await expect(page.locator('text=Project updated successfully')).toBeVisible();
 
     // --- ARCHIVE / DELETE TRANSITION ---
     // Click Archive icon button
-    await page.click('button[title="Archive Project"]');
+    await updatedProjectCard.locator('button[title="Archive Project"]').click();
     await expect(page.locator('h3:has-text("Archive Project?")')).toBeVisible();
 
     // Click confirm archive
@@ -111,7 +125,11 @@ test.describe('Projects Page E2E Tests', () => {
     // Verify dialog closes and list is empty again
     await expect(page.locator('h3:has-text("Archive Project?")')).not.toBeVisible();
     await expect(page.locator(`text=${updatedName}`)).not.toBeVisible();
-    await expect(page.locator('text=No projects found')).toBeVisible();
+    
+    const remainingCount = await page.locator('div.border-zinc-900').count();
+    if (remainingCount === 0) {
+      await expect(page.locator('text=No projects found')).toBeVisible();
+    }
     await expect(page.locator('text=Project archived successfully')).toBeVisible();
   });
 });

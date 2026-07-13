@@ -204,8 +204,13 @@ test.describe('Phase 8.1 — Task Foundation E2E Tests', () => {
     await page.waitForURL('**/tasks');
 
     // Wait for the loading skeleton to resolve before asserting empty state
-    // (the skeleton has id="tasks-loading-skeleton"; empty state appears after)
     await expect(page.locator('#tasks-loading-skeleton')).not.toBeVisible({ timeout: 10_000 });
+
+    // Wait for either the task list or empty state to be attached in DOM
+    await Promise.race([
+      page.waitForSelector('#tasks-list', { state: 'attached', timeout: 5000 }).catch(() => {}),
+      page.waitForSelector('text=No tasks yet', { state: 'attached', timeout: 5000 }).catch(() => {})
+    ]);
 
     // If the test account has existing tasks, this scenario is moot — skip gracefully
     const taskList = page.locator('#tasks-list');
@@ -402,5 +407,121 @@ test.describe('Phase 8.1 — Task Foundation E2E Tests', () => {
     // Final assertions are in afterEach — nothing more to assert here.
     // afterEach will verify consoleErrors === [] and networkFailures === [].
     expect(true).toBe(true); // explicit pass marker for test runner
+  });
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // Scenario 11 — Perform Complete Task CRUD lifecycle
+  // ────────────────────────────────────────────────────────────────────────────
+  test('11. Perform Complete Task CRUD lifecycle', async ({ page }) => {
+    await loginAndWait(page);
+    // 1. Establish project context first by creating a project
+    await page.goto('/projects');
+    await expect(page.locator('h1:has-text("Projects")')).toBeVisible();
+
+    // Click Create Project trigger
+    await page.click('button:has-text("Create Project")');
+    await expect(page.locator('h2:has-text("Create New Project")')).toBeVisible();
+
+    const projectName = `Task E2E Proj ${Math.floor(Math.random() * 10000)}`;
+    await page.fill('input[placeholder="e.g. SprintMind Engine"]', projectName);
+    await page.fill('textarea[placeholder*="Summarize objectives"]', 'E2E testing context project.');
+    await page.click('button[type="submit"]');
+
+    // Verify project is created
+    await expect(page.locator('h2:has-text("Create New Project")')).not.toBeVisible();
+    await expect(page.locator(`text=${projectName}`)).toBeVisible();
+
+    // 2. Go to Tasks page
+    await page.goto('/tasks');
+    await expect(page.locator('h1:has-text("Tasks")')).toBeVisible();
+
+    // 3. Open Create Task modal and check validation
+    await page.click('#btn-create-task');
+    await expect(page.locator('h2:has-text("Create Task")')).toBeVisible();
+
+    // Test Validation: empty title
+    await page.click('button[type="submit"]');
+    await expect(page.locator('text=Task title is required.')).toBeVisible();
+
+    // 4. Fill valid credentials and select our project
+    const taskTitle = `E2E Task Title ${Math.floor(Math.random() * 10000)}`;
+    await page.locator('#modal-create-task select').nth(0).selectOption({ label: projectName });
+    await page.fill('input[placeholder="e.g. Implement JWT middleware"]', taskTitle);
+    await page.fill('textarea[placeholder="Optional task details…"]', 'E2E Testing task description details.');
+    await page.locator('#modal-create-task select').nth(1).selectOption('in_progress');
+    await page.locator('#modal-create-task select').nth(2).selectOption('high');
+    
+    // Submit create task
+    await page.click('button[type="submit"]');
+
+    // Verify modal closes and task is listed
+    await expect(page.locator('#modal-create-task')).not.toBeVisible();
+    await expect(page.locator(`text=${taskTitle}`)).toBeVisible();
+    
+    const taskCard = page.locator(`[id^="task-card-"]`, { hasText: taskTitle });
+    await expect(taskCard.locator('text=In Progress')).toBeVisible();
+    await expect(taskCard.locator('text=↑ High')).toBeVisible();
+
+    // Verify success toast appears
+    await expect(page.locator('#success-toast')).toBeVisible();
+    await expect(page.locator('text=Task created successfully!')).toBeVisible();
+
+    // Wait for toast to fade out or dismiss
+    await page.waitForTimeout(1000);
+
+    // 5. EDIT TRANSITION
+    // Click edit icon button
+    await taskCard.hover();
+    const editBtn = taskCard.locator('[id^="btn-edit-task-"]');
+    await editBtn.click();
+    await expect(page.locator('h2:has-text("Edit Task")')).toBeVisible();
+
+    // Update title and status
+    const updatedTitle = `${taskTitle} Updated`;
+    await page.fill('input[placeholder="e.g. Implement JWT middleware"]', updatedTitle);
+    await page.locator('#modal-edit-task select').nth(0).selectOption('done');
+    await page.locator('#modal-edit-task select').nth(1).selectOption('low');
+    await page.click('button[type="submit"]');
+
+    // Verify modal closes and task details are updated
+    await expect(page.locator('#modal-edit-task')).not.toBeVisible();
+    await expect(page.locator(`text=${updatedTitle}`)).toBeVisible();
+    
+    const updatedTaskCard = page.locator(`[id^="task-card-"]`, { hasText: updatedTitle });
+    await expect(updatedTaskCard.locator('text=Done')).toBeVisible();
+    await expect(updatedTaskCard.locator('text=↑ Low')).toBeVisible();
+    await expect(page.locator('#success-toast')).toBeVisible();
+    await expect(page.locator('text=Task updated successfully!')).toBeVisible();
+
+    // Wait for toast
+    await page.waitForTimeout(1000);
+
+    // 6. ARCHIVE / DELETE TRANSITION
+    // Hover and click Archive button
+    await updatedTaskCard.hover();
+    const archiveBtn = updatedTaskCard.locator('[id^="btn-archive-task-"]');
+    await archiveBtn.click();
+    await expect(page.locator('h3:has-text("Archive Task?")')).toBeVisible();
+
+    // Click confirm archive
+    await page.click('button:has-text("Yes, Archive")');
+
+    // Verify modal closes and task is gone
+    await expect(page.locator('#modal-archive-task')).not.toBeVisible();
+    await expect(page.locator(`text=${updatedTitle}`)).not.toBeVisible();
+    await expect(page.locator('#success-toast')).toBeVisible();
+    await expect(page.locator('text=Task archived successfully!')).toBeVisible();
+
+    // 7. CLEANUP: Delete/archive the project we created
+    await page.goto('/projects');
+    await expect(page.locator(`text=${projectName}`)).toBeVisible();
+    
+    // Find project card and click Archive
+    const projectCard = page.locator('div.border-zinc-900', { hasText: projectName });
+    await projectCard.locator('button[title="Archive Project"]').click();
+    await expect(page.locator('h3:has-text("Archive Project?")')).toBeVisible();
+    await page.click('button:has-text("Yes, Archive")');
+    await expect(page.locator('h3:has-text("Archive Project?")')).not.toBeVisible();
+    await expect(page.locator(`text=${projectName}`)).not.toBeVisible();
   });
 });
