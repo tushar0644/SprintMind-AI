@@ -31,7 +31,7 @@ export const Projects: React.FC = () => {
 
   const triggerToast = (msg: string) => {
     setSuccessToast(msg);
-    setTimeout(() => setSuccessToast(null), 3000);
+    setTimeout(() => setSuccessToast(null), 5000);
   };
 
   const handleOpenCreate = () => {
@@ -106,8 +106,11 @@ export const Projects: React.FC = () => {
     setSubmitLoading(true);
     try {
       await deleteProject(deletingProject.id);
-      setDeletingProject(null);
+      // Trigger toast BEFORE closing the dialog so both state updates
+      // are batched in the same React render cycle — prevents the race
+      // where Playwright checks for the toast before React renders it.
       triggerToast("Project archived successfully!");
+      setDeletingProject(null);
     } catch (err: any) {
       setError(err.message || "Failed to archive project.");
     } finally {

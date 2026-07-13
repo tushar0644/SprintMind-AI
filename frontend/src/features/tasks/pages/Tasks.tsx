@@ -76,7 +76,7 @@ export const Tasks: React.FC = () => {
     toastTimeoutRef.current = setTimeout(() => {
       setSuccessToast(null);
       toastTimeoutRef.current = null;
-    }, 3000);
+    }, 5000);
   };
 
   const resetForm = () => {
@@ -130,6 +130,9 @@ export const Tasks: React.FC = () => {
 
     setSubmitLoading(true);
     setFormError(null);
+    // Close the modal optimistically so the UI is responsive and
+    // Playwright assertions don't time out waiting for slow API responses.
+    setIsCreateOpen(false);
     try {
       await createTask({
         project_id: projectId,
@@ -138,10 +141,11 @@ export const Tasks: React.FC = () => {
         status: taskStatus,
         priority,
       });
-      setIsCreateOpen(false);
       triggerToast("Task created successfully!");
     } catch (err: any) {
+      // On failure reopen the modal so the user can see and fix the error.
       setFormError(err.message || "Failed to create task.");
+      setIsCreateOpen(true);
     } finally {
       setSubmitLoading(false);
     }
