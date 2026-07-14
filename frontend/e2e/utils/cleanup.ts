@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
 import path from "path";
@@ -10,7 +11,7 @@ function loadEnv() {
   const envPath = path.resolve(process.cwd(), ".env");
   if (fs.existsSync(envPath)) {
     const content = fs.readFileSync(envPath, "utf-8");
-    content.split(/\r?\n/).forEach((line) => {
+    content.split(/\r?\n/).forEach((line: string) => {
       const match = line.match(/^\s*([^#\s=]+)\s*=\s*(.*)$/);
       if (match) {
         const key = match[1];

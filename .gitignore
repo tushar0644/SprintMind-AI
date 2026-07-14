@@ -42,3 +42,14 @@ out/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Playwright
+playwright-report/
+test-results/
+blob-report/
+
+# E2E Screenshots
+frontend/e2e-screenshots/
+
+# Coverage
+coverage/
