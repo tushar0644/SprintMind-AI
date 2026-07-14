@@ -522,7 +522,7 @@ test.describe('Phase 8.1 — Task Foundation E2E Tests', () => {
     await expect(page.locator(`text=${projectName}`)).toBeVisible();
     
     // Find project card and click Archive
-    const projectCard = page.locator('div.border-zinc-900', { hasText: projectName });
+    const projectCard = page.locator('div.project-card', { hasText: projectName });
     await projectCard.locator('button[title="Archive Project"]').click();
     await expect(page.locator('h3:has-text("Archive Project?")')).toBeVisible();
     await page.click('button:has-text("Yes, Archive")');

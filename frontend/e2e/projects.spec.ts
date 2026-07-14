@@ -93,7 +93,7 @@ test.describe('Projects Page E2E Tests', () => {
     await expect(page.locator('h2:has-text("Create New Project")')).not.toBeVisible();
     await expect(page.locator(`text=${projectName}`)).toBeVisible();
     
-    const projectCard = page.locator('div.border-zinc-900', { hasText: projectName });
+    const projectCard = page.locator('div.project-card', { hasText: projectName });
     await expect(projectCard.locator('text=active')).toBeVisible();
 
     // Verify success toast appears
@@ -108,14 +108,14 @@ test.describe('Projects Page E2E Tests', () => {
     // Update name and select archived
     const updatedName = `${projectName} Edited`;
     await page.fill('input[placeholder="e.g. SprintMind Engine"]', updatedName);
-    await page.selectOption('select', 'archived');
+    await page.selectOption('form select', 'archived');
     await page.click('button[type="submit"]');
 
     // Verify modal closes and status is updated
     await expect(page.locator('h2:has-text("Edit Project Settings")')).not.toBeVisible();
     await expect(page.locator(`text=${updatedName}`)).toBeVisible();
     
-    const updatedProjectCard = page.locator('div.border-zinc-900', { hasText: updatedName });
+    const updatedProjectCard = page.locator('div.project-card', { hasText: updatedName });
     await expect(updatedProjectCard.locator('text=archived')).toBeVisible();
     await expect(page.locator('text=Project updated successfully')).toBeVisible();
 
@@ -131,7 +131,7 @@ test.describe('Projects Page E2E Tests', () => {
     await expect(page.locator('h3:has-text("Archive Project?")')).not.toBeVisible();
     await expect(page.locator(`text=${updatedName}`)).not.toBeVisible();
     
-    const remainingCount = await page.locator('div.border-zinc-900').count();
+    const remainingCount = await page.locator('div.project-card').count();
     if (remainingCount === 0) {
       await expect(page.locator('text=No projects found')).toBeVisible();
     }
