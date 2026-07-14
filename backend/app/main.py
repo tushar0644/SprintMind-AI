@@ -18,6 +18,7 @@ from fastapi.encoders import jsonable_encoder
 
 from app.core.config import settings
 from app.config.logging import logger, request_id_ctx_var
+from app.schemas.health import HealthResponse
 from app.utils.health import get_root_status, get_health_status
 from app.routers.api import api_router
 
@@ -141,12 +142,12 @@ def read_root():
     """
     return get_root_status()
 
-@app.get("/health", tags=["Health"])
-def read_health():
+@app.get("/health", response_model=HealthResponse, tags=["Health"])
+def read_health() -> HealthResponse:
     """
     Standard load-balancer health-check polling endpoint.
     """
-    return get_health_status()
+    return HealthResponse(**get_health_status())
 
 # 6. Register Modular Aggregate Routing
 # Future Modules
