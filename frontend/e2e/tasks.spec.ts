@@ -23,6 +23,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { cleanupDatabase } from './utils/cleanup';
 
 // ─── Auth helpers ──────────────────────────────────────────────────────────
 
@@ -44,6 +45,10 @@ async function loginAndWait(page: any) {
 // ─── Test Suite ────────────────────────────────────────────────────────────
 
 test.describe('Phase 8.1 — Task Foundation E2E Tests', () => {
+  test.beforeAll(async () => {
+    await cleanupDatabase();
+  });
+
   // Shared diagnostic accumulators; reset before every test.
   let consoleErrors:   string[] = [];
   let networkFailures: string[] = [];

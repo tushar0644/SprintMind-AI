@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { cleanupDatabase } from './utils/cleanup';
 
 test.describe('Projects Page E2E Tests', () => {
+  test.beforeAll(async () => {
+    await cleanupDatabase();
+  });
+
   let consoleErrors: string[] = [];
   let networkFailures: string[] = [];
 
