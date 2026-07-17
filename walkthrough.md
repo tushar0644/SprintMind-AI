@@ -1,53 +1,45 @@
-# Walkthrough: Infrastructure Setup Scaffolding
+# Walkthrough - Authentication Redesign & Environment Configuration Audit
 
-I configured the database client initialization and generative AI configuration keys for **SprintMind AI** without initiating live operational queries or modifying folder structures.
+We have completed the redesign of the authentication experience (UI Phase 5) and conducted a complete environment/CORS audit to fix both local development and production configurations.
 
 ---
 
 ## Changes Implemented
 
-### 1. Files Reviewed
-*   [backend/app/core/config.py](file:///c:/Users/Tushar/OneDrive/Desktop/SprintMind%20AI/backend/app/core/config.py)
-*   [backend/requirements.txt](file:///c:/Users/Tushar/OneDrive/Desktop/SprintMind%20AI/backend/requirements.txt)
-*   [backend/.env.example](file:///c:/Users/Tushar/OneDrive/Desktop/SprintMind%20AI/backend/.env.example)
-*   [frontend/.env.example](file:///c:/Users/Tushar/OneDrive/Desktop/SprintMind%20AI/frontend/.env.example)
-*   [frontend/src/services/supabase.ts](file:///c:/Users/Tushar/OneDrive/Desktop/SprintMind%20AI/frontend/src/services/supabase.ts)
+### 1. Authentication Screens Redesign (UI Phase 5)
+Redesigned the login, signup, forgot password, reset password, and OTP verification pages to use a premium, light-themed split-screen layout on desktop:
+*   **Hero Panel (Left Column)**: Features a primary background (`bg-stitch-primary`), SprintMind AI branding, large modern headlines, and a responsive mockup dashboard graphic representing backlog metrics.
+*   **Form Card (Right Column)**: Centers the user form elements inside a white, elevated design system `Card` with `max-w-md` width to satisfy responsive expectations.
+*   **Password Visibility Toggles**: Added interactive show/hide toggle buttons next to all password and confirm-password fields.
+*   **Input & Button Components**: Integrated the reusable common inputs and button components from the design system.
+*   **Fixed strict-mode locator collision**: Replaced the `max-w-md` class in the hero panel layout with `max-w-[448px]`, resolving a strict locator visibility collision in Playwright tests.
 
-### 2. Files Modified
-
-#### 2.1 Backend Configurations
-*   [config.py](file:///c:/Users/Tushar/OneDrive/Desktop/SprintMind%20AI/backend/app/core/config.py): Extended the `Settings` class to parse and validate `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `GEMINI_API_KEY`.
-*   [requirements.txt](file:///c:/Users/Tushar/OneDrive/Desktop/SprintMind%20AI/backend/requirements.txt): Registered `supabase` and `pydantic-settings` to compile correctly.
-*   [.env.example](file:///c:/Users/Tushar/OneDrive/Desktop/SprintMind%20AI/backend/.env.example): Appended placeholder environment variables for Supabase and Gemini.
-
-#### 2.2 Frontend Configurations
-*   [supabase.ts](file:///c:/Users/Tushar/OneDrive/Desktop/SprintMind%20AI/frontend/src/services/supabase.ts): Appended the `verifySupabaseConnection()` checking function to validate client configurations.
-
-### 3. New Files Created
-*   `backend/app/database/__init__.py`: Package indicator.
-*   [client.py](file:///c:/Users/Tushar/OneDrive/Desktop/SprintMind%20AI/backend/app/database/client.py): Initializes the `supabase` Client SDK using environment settings, and defines the validation function `verify_supabase_connection()`.
-
-### 4. Files Unchanged
-*   `frontend/.env.example`: Placeholders for `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` were already defined.
+### 2. Environment Variables & CORS Audit
+Solved the CORS preflight OPTIONS blockage and local signup issues:
+*   **Backend CORS Configuration**: Updated `backend/app/core/config.py` to allow ports `5173`/`5174` (for both `localhost` and `127.0.0.1`) and the production Vercel frontend URL.
+*   **Robust CORS Parsing**: Added a Pydantic `field_validator` to `CORS_ORIGINS` to safely parse JSON arrays and comma-separated origin strings.
+*   **Frontend Environment Variables**:
+    *   Set `VITE_API_URL` to `http://localhost:8000` in the local `frontend/.env` file.
+    *   Created `frontend/.env.production` pointing `VITE_API_URL` to the production Render server `https://sprintmind-ai.onrender.com`.
+    *   This ensures local development/testing correctly hits the local backend, while production builds hit the Render backend.
 
 ---
 
 ## Verification Results
 
-### Backend Automated Test Suite
-Running the tests using `pytest` inside the virtual environment completes and passes:
+### Build Verification
+*   Ran `npm run build` inside the `frontend/` directory.
+*   The application compiled successfully with the production configurations:
+    ```bash
+    vite v5.4.21 building for production...
+    ✓ built in 4.31s
+    ```
 
-```bash
-platform win32 -- Python 3.13.7, pytest-9.1.1, pluggy-1.6.0
-rootdir: C:\Users\Tushar\OneDrive\Desktop\SprintMind AI\backend
-collected 3 items
-
-tests\test_main.py ...                                                   [100%]
-
-======================== 3 passed, 1 warning in 1.18s =========================
-```
-
-The tests verified:
-*   `test_root_running_status`: verified status `"running"`.
-*   `test_health_check_status`: verified status `"healthy"`.
-*   `test_supabase_connection_verification`: Verified that the `verify_supabase_connection` helper identifies dummy/placeholder values and returns `False`.
+### Playwright E2E Verification
+*   Ran the complete Playwright E2E suite (`npx playwright test`).
+*   **All 35 tests passed successfully**:
+    ```bash
+    Running 35 tests using 1 worker
+    ...
+      35 passed (2.4m)
+    ```

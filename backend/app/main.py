@@ -54,6 +54,7 @@ app = FastAPI(
 #     allowed_hosts=settings.ALLOWED_HOSTS
 # )
 
+
 # Cross-Origin Resource Sharing (CORS) Middleware
 app.add_middleware(
     CORSMiddleware,
