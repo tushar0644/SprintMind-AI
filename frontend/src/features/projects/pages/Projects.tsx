@@ -173,7 +173,9 @@ export const Projects: React.FC = () => {
       { initials: "KP", color: "bg-amber-500 text-white", name: "Kevin Patel" },
       { initials: "LN", color: "bg-purple-500 text-white", name: "Lisa Nelson" }
     ];
-    const index = projectId.charCodeAt(0) % 3 + 2; // returns 2, 3, or 4 members
+    const safeId = projectId || "default";
+    const code = safeId.charCodeAt(0);
+    const index = isNaN(code) ? 2 : (code % 3 + 2);
     return membersList.slice(0, index);
   };
 
@@ -434,6 +436,28 @@ export const Projects: React.FC = () => {
                         <Badge variant={project.status === "active" ? "success" : "neutral"} className="rounded-lg tracking-wide uppercase px-2 py-0.5 text-[9px] font-bold">
                           {project.status}
                         </Badge>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEdit(project);
+                          }}
+                          className="p-1 rounded-lg text-stitch-on-surface-variant/60 hover:text-stitch-primary hover:bg-stitch-surface-container transition-all duration-200"
+                          title="Edit Project"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingProject(project);
+                          }}
+                          className="p-1 rounded-lg text-stitch-on-surface-variant/60 hover:text-stitch-error hover:bg-red-50 transition-all duration-200"
+                          title="Archive Project"
+                        >
+                          <Archive className="w-3.5 h-3.5" />
+                        </button>
 
                         {/* Custom Dropdown Action Menu */}
                         <div className="relative">

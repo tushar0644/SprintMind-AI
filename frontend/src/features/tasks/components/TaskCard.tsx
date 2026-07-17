@@ -2,12 +2,16 @@ import React from "react";
 import { Task, TaskStatus, TaskPriority } from "../types";
 import { Card } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
+import { Edit2, Archive, Calendar, Clock } from "lucide-react";
 
 interface TaskCardProps {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
   onStatusChange: (task: Task, status: TaskStatus) => void;
+  projectName?: string;
+  isSelected?: boolean;
+  onSelectToggle?: () => void;
 }
 
 const STATUS_BADGE_VARIANTS: Record<TaskStatus, "neutral" | "secondary" | "success" | "danger"> = {
@@ -50,6 +54,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onEdit,
   onDelete,
   onStatusChange,
+  projectName = "Workspace",
+  isSelected = false,
+  onSelectToggle,
 }) => {
   const nextStatus = (): TaskStatus => {
     const cycle: TaskStatus[] = ["todo", "in_progress", "done"];
@@ -70,7 +77,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
   // Dynamic user assignee initials and gradient avatar
   const getAssignee = (taskId: string) => {
-    const charCodeSum = taskId.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    const safeId = taskId || "default";
+    const charCodeSum = safeId.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
     const names = ["John Doe", "Sarah Miller", "Alex Lim", "Patricia May", "Kevin Smith", "Tony Stark"];
     const initials = ["JD", "SM", "AL", "PM", "KS", "TS"];
     const idx = charCodeSum % names.length;
@@ -93,13 +101,26 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     <Card
       id={`task-card-${task.id}`}
       hoverable={true}
-      className={`group flex items-start gap-4 p-4 ${BORDER_LEFT_STYLES[task.status]} hover:border-stitch-outline/30 transition-all duration-200 select-none bg-white`}
+      className={`group flex items-start gap-3.5 p-4.5 ${BORDER_LEFT_STYLES[task.status]} hover:border-stitch-primary/30 transition-all duration-300 select-none bg-white rounded-2xl relative`}
     >
+      {/* Bulk action Checkbox */}
+      {onSelectToggle && (
+        <div className="mt-1 flex items-center shrink-0">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={onSelectToggle}
+            className="w-3.5 h-3.5 rounded border-stitch-outline-variant text-stitch-primary focus:ring-stitch-primary/30 transition-all duration-200 cursor-pointer"
+            aria-label={`Select task: ${task.title}`}
+          />
+        </div>
+      )}
+
       {/* Cycle Status Checkbox Button */}
       <button
         title={`Mark as ${STATUS_LABELS[nextStatus()]}`}
         onClick={() => onStatusChange(task, nextStatus())}
-        className={`mt-1 w-4.5 h-4.5 rounded-full border flex-shrink-0 flex items-center justify-center transition-all duration-150 ${
+        className={`mt-0.5 w-4.5 h-4.5 rounded-full border flex-shrink-0 flex items-center justify-center transition-all duration-200 ${
           task.status === "done"
             ? "bg-emerald-500/10 border-emerald-500 text-emerald-600 shadow-sm"
             : "border-stitch-outline-variant hover:border-stitch-primary hover:bg-stitch-primary/5 text-transparent"
@@ -110,77 +131,79 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         </svg>
       </button>
 
-      {/* Main content area */}
+      {/* Main Content Area */}
       <div className="flex-1 min-w-0">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
           <p
-            className={`text-xs font-semibold leading-snug truncate font-sans ${
+            className={`text-xs font-bold leading-snug truncate font-sans ${
               task.status === "done" ? "line-through text-stitch-on-surface-variant/40" : "text-stitch-on-surface"
             }`}
           >
             {task.title}
           </p>
+
           {/* Due Date Display */}
-          <div className="flex items-center gap-1 text-[10px] text-stitch-on-surface-variant/60 shrink-0 font-medium select-none">
-            <svg className="w-3.5 h-3.5 text-stitch-on-surface-variant/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
+          <div className="flex items-center gap-1.5 text-[10px] text-stitch-on-surface-variant/60 shrink-0 font-semibold select-none">
+            <Calendar className="w-3.5 h-3.5 text-stitch-on-surface-variant/40" />
             <span>{dueDate}</span>
           </div>
         </div>
 
         {task.description && (
-          <p className="text-[10px] text-stitch-on-surface-variant/70 mt-1 line-clamp-1 leading-relaxed">
+          <p className="text-[10px] text-stitch-on-surface-variant/70 mt-1 line-clamp-2 leading-relaxed">
             {task.description}
           </p>
         )}
 
-        {/* Badges & Assignee Row */}
-        <div className="flex items-center justify-between mt-3 gap-2">
-          <div className="flex items-center gap-1.5 flex-wrap">
+        {/* Details Row: Badges, Project Name, Assignee and Last Updated */}
+        <div className="flex flex-wrap items-center justify-between mt-3.5 gap-2.5">
+          <div className="flex items-center gap-2 flex-wrap">
             <Badge variant={STATUS_BADGE_VARIANTS[task.status]}>
               {STATUS_LABELS[task.status]}
             </Badge>
             <Badge variant={PRIORITY_BADGE_VARIANTS[task.priority]} className="capitalize">
               ↑ {PRIORITY_LABELS[task.priority]}
             </Badge>
+            <span className="text-[10px] font-bold text-stitch-primary bg-stitch-primary/5 px-2 py-0.5 rounded-lg border border-stitch-primary/10">
+              {projectName}
+            </span>
           </div>
 
-          {/* Assignee Avatar */}
-          <div 
-            title={`Assigned to ${assignee.name}`}
-            className={`w-6 h-6 rounded-full bg-gradient-to-br ${assignee.gradient} flex items-center justify-center text-[9px] font-bold text-white border border-white shadow-sm shrink-0`}
-          >
-            {assignee.initials}
+          <div className="flex items-center gap-3">
+            {/* Last Updated text */}
+            <span className="text-[9px] text-stitch-on-surface-variant/50 font-bold flex items-center gap-1">
+              <Clock className="w-3 h-3 text-stitch-on-surface-variant/40" />
+              <span>Updated {new Date(task.updated_at).toLocaleDateString()}</span>
+            </span>
+
+            {/* Assignee Avatar */}
+            <div
+              title={`Assigned to ${assignee.name}`}
+              className={`w-6 h-6 rounded-full bg-gradient-to-br ${assignee.gradient} flex items-center justify-center text-[9px] font-bold text-white border border-white shadow-sm shrink-0`}
+            >
+              {assignee.initials}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Hover actions */}
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150 shrink-0 select-none">
+      {/* Action Buttons */}
+      <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200 shrink-0 select-none">
         <button
           id={`btn-edit-task-${task.id}`}
           onClick={() => onEdit(task)}
           title="Edit task"
-          className="p-1.5 rounded-stitch text-stitch-on-surface-variant/60 hover:text-stitch-primary hover:bg-stitch-primary/10 transition-all duration-150"
+          className="p-1.5 rounded-lg text-stitch-on-surface-variant/60 hover:text-stitch-primary hover:bg-stitch-surface-container transition-all duration-200"
         >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-            />
-          </svg>
+          <Edit2 className="w-3.5 h-3.5" />
         </button>
         <button
           id={`btn-archive-task-${task.id}`}
           onClick={() => onDelete(task)}
           title="Archive Task"
-          className="p-1.5 rounded-stitch text-stitch-on-surface-variant/60 hover:text-stitch-error hover:bg-stitch-error/10 transition-all duration-150"
+          className="p-1.5 rounded-lg text-stitch-on-surface-variant/60 hover:text-stitch-error hover:bg-stitch-surface-container transition-all duration-200"
         >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-            />
-          </svg>
+          <Archive className="w-3.5 h-3.5" />
         </button>
       </div>
     </Card>
