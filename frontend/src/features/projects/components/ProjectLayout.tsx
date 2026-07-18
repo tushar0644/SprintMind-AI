@@ -51,6 +51,15 @@ export const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
         </svg>
       ),
     },
+    {
+      to: "/ai",
+      label: "AI Assistant",
+      icon: (
+        <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0012 18.75c-.304 0-.603-.04-.89-.12l-.548-.547z" />
+        </svg>
+      ),
+    },
   ];
 
   return (
@@ -112,6 +121,38 @@ export const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
           })}
         </nav>
 
+        {/* AI Assistant Sub-menu Section */}
+        <div className="px-6 py-1 select-none">
+          <span className="text-[9px] uppercase font-extrabold tracking-wider text-stitch-on-surface-variant/50">AI Assistant</span>
+        </div>
+        <div className="p-4 pt-1 space-y-1.5 overflow-y-auto max-h-[190px]">
+          {[
+            { to: "/ai/sprint-planner", label: "Sprint Planner" },
+            { to: "/ai/project-health", label: "Project Health" },
+            { to: "/ai/task-prioritizer", label: "Task Prioritizer" },
+            { to: "/ai/meeting-notes", label: "Meeting Notes" },
+            { to: "/ai/daily-standup", label: "Daily Standup" },
+            { to: "/ai/risk-analysis", label: "Risk Analysis" }
+          ].map((subItem) => {
+            const isSubActive = location.pathname === subItem.to;
+            return (
+              <Link
+                key={subItem.to}
+                to={subItem.to}
+                onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-2.5 px-3 py-1.5 rounded-stitch text-[11px] font-semibold transition-all duration-200 ${
+                  isSubActive
+                    ? "bg-stitch-primary/10 text-stitch-primary text-indigo-600 border border-stitch-primary/15 shadow-sm"
+                    : "text-stitch-on-surface-variant hover:bg-stitch-surface-container-low hover:text-stitch-on-surface"
+                }`}
+              >
+                <div className={`w-1.5 h-1.5 rounded-full ${isSubActive ? "bg-stitch-primary animate-pulse" : "bg-zinc-300"}`} />
+                <span>{subItem.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+
         {/* User Workspace Info Footer */}
         <div className="p-4 border-t border-stitch-outline-variant/60">
           <div className="flex items-center gap-3 px-3.5 py-3 bg-stitch-surface-container-low border border-stitch-outline-variant/40 rounded-stitch mb-3 shadow-sm select-none">
@@ -167,6 +208,20 @@ export const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
                 ? "Tasks"
                 : location.pathname === "/settings"
                 ? "Settings"
+                : location.pathname === "/ai"
+                ? "AI Assistant Overview"
+                : location.pathname === "/ai/sprint-planner"
+                ? "AI Sprint Planner"
+                : location.pathname === "/ai/project-health"
+                ? "AI Project Health Analyzer"
+                : location.pathname === "/ai/task-prioritizer"
+                ? "AI Task Prioritizer"
+                : location.pathname === "/ai/meeting-notes"
+                ? "AI Meeting Summarizer"
+                : location.pathname === "/ai/daily-standup"
+                ? "AI Daily Standup Reporter"
+                : location.pathname === "/ai/risk-analysis"
+                ? "AI Risk Analyzer"
                 : "Projects Directory"}
             </h2>
           </div>

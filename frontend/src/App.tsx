@@ -12,6 +12,13 @@ import { Dashboard } from "./pages/Dashboard";
 import { Projects } from "./features/projects/pages/Projects";
 import { Tasks } from "./features/tasks/pages/Tasks";
 import { Settings } from "./pages/Settings";
+import { AIOverview } from "./features/ai/pages/AIOverview";
+import { SprintPlanner } from "./features/ai/pages/SprintPlanner";
+import { ProjectHealth } from "./features/ai/pages/ProjectHealth";
+import { TaskPrioritizer } from "./features/ai/pages/TaskPrioritizer";
+import { MeetingNotes } from "./features/ai/pages/MeetingNotes";
+import { DailyStandup } from "./features/ai/pages/DailyStandup";
+import { RiskAnalysis } from "./features/ai/pages/RiskAnalysis";
 
 // Custom Error Boundary Component to prevent application blank screens
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
@@ -106,6 +113,62 @@ export const App: React.FC = () => {
               element = {
                 <ProtectedRoute>
                   <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ai"
+              element = {
+                <ProtectedRoute>
+                  <AIOverview />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ai/sprint-planner"
+              element = {
+                <ProtectedRoute>
+                  <SprintPlanner />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ai/project-health"
+              element = {
+                <ProtectedRoute>
+                  <ProjectHealth />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ai/task-prioritizer"
+              element = {
+                <ProtectedRoute>
+                  <TaskPrioritizer />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ai/meeting-notes"
+              element = {
+                <ProtectedRoute>
+                  <MeetingNotes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ai/daily-standup"
+              element = {
+                <ProtectedRoute>
+                  <DailyStandup />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ai/risk-analysis"
+              element = {
+                <ProtectedRoute>
+                  <RiskAnalysis />
                 </ProtectedRoute>
               }
             />
