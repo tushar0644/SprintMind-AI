@@ -127,7 +127,7 @@ test.describe('Collaboration Foundation — Task Comments E2E Tests', () => {
     await expect(modal.locator('strong:has-text("strong")')).toBeVisible();
 
     // 5. Toggle an emoji reaction
-    const commentCard = modal.locator('.group.relative').first();
+    const commentCard = modal.locator('div.select-text div.group').first();
     await commentCard.hover();
     
     // Select the 👍 emoji button

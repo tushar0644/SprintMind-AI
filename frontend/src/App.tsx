@@ -23,6 +23,7 @@ import { AIHistory } from "./features/ai/pages/AIHistory";
 import { AIAnalytics } from "./features/ai/pages/AIAnalytics";
 import { Notifications } from "./features/notifications/pages/Notifications";
 import { ProjectFilesPage } from "./features/attachments/components/ProjectFilesPage";
+import { DocumentsPage } from "./features/documents/pages/DocumentsPage";
 
 // Custom Error Boundary Component to prevent application blank screens
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
@@ -117,6 +118,14 @@ export const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <Tasks />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/documents"
+              element={
+                <ProtectedRoute>
+                  <DocumentsPage />
                 </ProtectedRoute>
               }
             />

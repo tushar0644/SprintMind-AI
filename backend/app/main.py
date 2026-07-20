@@ -104,18 +104,29 @@ async def log_http_transactions(request: Request, call_next):
         request_id_ctx_var.reset(token)
 
 # 4. Global Exception Handler Registry
+def get_cors_headers(request: Request) -> dict:
+    origin = request.headers.get("origin")
+    if origin and (origin in settings.CORS_ORIGINS or "*" in settings.CORS_ORIGINS):
+        return {
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+        }
+    return {}
+
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
     """
     Standardizes HTTP exceptions to return detail and request_id.
     """
+    headers = getattr(exc, "headers", None) or {}
+    headers = {**headers, **get_cors_headers(request)}
     return JSONResponse(
         status_code=exc.status_code,
         content={
             "detail": jsonable_encoder(exc.detail),
             "request_id": request_id_ctx_var.get()
         },
-        headers=getattr(exc, "headers", None)
+        headers=headers
     )
 
 @app.exception_handler(RequestValidationError)
@@ -123,12 +134,14 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     """
     Standardizes validation exceptions to return errors detail and request_id.
     """
+    headers = get_cors_headers(request)
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
             "detail": jsonable_encoder(exc.errors()),
             "request_id": request_id_ctx_var.get()
-        }
+        },
+        headers=headers
     )
 
 @app.exception_handler(Exception)
@@ -137,12 +150,14 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     Catches unhandled errors globally, preventing server stack trace leakages to clients.
     """
     logger.error(f"Global unhandled error captured: {str(exc)}", exc_info=True)
+    headers = get_cors_headers(request)
     return JSONResponse(
         status_code=500,
         content={
             "detail": "An unexpected server error occurred.",
             "request_id": request_id_ctx_var.get()
-        }
+        },
+        headers=headers
     )
 
 # 5. Core Foundational Routes

@@ -479,7 +479,7 @@ test.describe('Phase 8.1 — Task Foundation E2E Tests', () => {
     await taskCard.hover();
     const editBtn = taskCard.locator('[id^="btn-edit-task-"]');
     await editBtn.click();
-    await expect(page.locator('h2:has-text("Edit Task")')).toBeVisible();
+    await expect(page.locator('h2:has-text("Task Details")')).toBeVisible();
 
     // Update title and status
     const updatedTitle = `${taskTitle} Updated`;

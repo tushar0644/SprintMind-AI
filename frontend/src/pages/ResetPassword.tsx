@@ -69,7 +69,7 @@ const AuthHeroPanel: React.FC = () => (
 export const ResetPassword: React.FC = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [localLoading, setLocalLoading] = useState(false);

@@ -6,6 +6,14 @@ export const config = {
   environment: import.meta.env.MODE || "development",
 };
 
+
+// Validate that required keys are present in development/production
+if (!config.supabaseUrl || !config.supabaseAnonKey) {
+  console.warn(
+    "Warning: Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY configurations. Verification operations will fail."
+  );
+}
+
 /**
  * Checks if Supabase client configuration variables are fully populated.
  * Confirms that values are present and not standard placeholder strings.
@@ -48,3 +56,4 @@ export const isGeminiConfigured = (): boolean => {
     return false;
   }
 };
+

@@ -43,6 +43,15 @@ export const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
       ),
     },
     {
+      to: "/documents",
+      label: "Documents",
+      icon: (
+        <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        </svg>
+      ),
+    },
+    {
       to: "/settings",
       label: "Settings",
       icon: (
@@ -215,29 +224,31 @@ export const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
                 ? "Workspace Overview"
                 : location.pathname === "/tasks"
                   ? "Tasks"
-                  : location.pathname === "/settings"
-                    ? "Settings"
-                    : location.pathname === "/ai"
-                      ? "AI Assistant Overview"
-                      : location.pathname === "/ai/sprint-planner"
-                        ? "AI Sprint Planner"
-                        : location.pathname === "/ai/project-health"
-                          ? "AI Project Health Analyzer"
-                          : location.pathname === "/ai/task-prioritizer"
-                            ? "AI Task Prioritizer"
-                            : location.pathname === "/ai/meeting-notes"
-                              ? "AI Meeting Summarizer"
-                              : location.pathname === "/ai/daily-standup"
-                                ? "AI Daily Standup Reporter"
-                                : location.pathname === "/ai/risk-analysis"
-                                  ? "AI Risk Analyzer"
-                                  : location.pathname === "/ai/history"
-                                    ? "AI History"
-                                    : location.pathname === "/ai/analytics"
-                                      ? "AI Analytics Dashboard"
-                                      : location.pathname === "/notifications"
-                                        ? "Notifications"
-                                        : "Projects Directory"}
+                  : location.pathname === "/documents"
+                    ? "Documents"
+                    : location.pathname === "/settings"
+                      ? "Settings"
+                      : location.pathname === "/ai"
+                        ? "AI Assistant Overview"
+                        : location.pathname === "/ai/sprint-planner"
+                          ? "AI Sprint Planner"
+                          : location.pathname === "/ai/project-health"
+                            ? "AI Project Health Analyzer"
+                            : location.pathname === "/ai/task-prioritizer"
+                              ? "AI Task Prioritizer"
+                              : location.pathname === "/ai/meeting-notes"
+                                ? "AI Meeting Summarizer"
+                                : location.pathname === "/ai/daily-standup"
+                                  ? "AI Daily Standup Reporter"
+                                  : location.pathname === "/ai/risk-analysis"
+                                    ? "AI Risk Analyzer"
+                                    : location.pathname === "/ai/history"
+                                      ? "AI History"
+                                      : location.pathname === "/ai/analytics"
+                                        ? "AI Analytics Dashboard"
+                                        : location.pathname === "/notifications"
+                                          ? "Notifications"
+                                          : "Projects Directory"}
             </h2>
           </div>
           <div className="flex items-center gap-3">
