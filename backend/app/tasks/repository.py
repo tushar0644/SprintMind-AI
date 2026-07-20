@@ -181,6 +181,7 @@ class TaskRepository:
                 id=uuid4(),
                 project_id=project_id,
                 owner_id=owner_id,
+                assignee_id=task_data.assignee_id,
                 title=task_data.title,
                 description=task_data.description,
                 status=task_data.status or "todo",
@@ -236,6 +237,8 @@ class TaskRepository:
                     t.status = task_data.status
                 if task_data.priority is not None:
                     t.priority = task_data.priority
+                if task_data.assignee_id is not None:
+                    t.assignee_id = task_data.assignee_id
                 t.updated_at = datetime.now(timezone.utc)
                 return t
 

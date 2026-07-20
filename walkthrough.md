@@ -1,45 +1,35 @@
-# Walkthrough - Authentication Redesign & Environment Configuration Audit
+# Walkthrough - Attachments & File Collaboration (v2.3)
 
-We have completed the redesign of the authentication experience (UI Phase 5) and conducted a complete environment/CORS audit to fix both local development and production configurations.
+We have successfully built and verified a production-ready attachment system using Supabase Storage. All backend and frontend tasks for Sprint v2.3 are complete, and all tests pass.
 
 ---
 
 ## Changes Implemented
 
-### 1. Authentication Screens Redesign (UI Phase 5)
-Redesigned the login, signup, forgot password, reset password, and OTP verification pages to use a premium, light-themed split-screen layout on desktop:
-*   **Hero Panel (Left Column)**: Features a primary background (`bg-stitch-primary`), SprintMind AI branding, large modern headlines, and a responsive mockup dashboard graphic representing backlog metrics.
-*   **Form Card (Right Column)**: Centers the user form elements inside a white, elevated design system `Card` with `max-w-md` width to satisfy responsive expectations.
-*   **Password Visibility Toggles**: Added interactive show/hide toggle buttons next to all password and confirm-password fields.
-*   **Input & Button Components**: Integrated the reusable common inputs and button components from the design system.
-*   **Fixed strict-mode locator collision**: Replaced the `max-w-md` class in the hero panel layout with `max-w-[448px]`, resolving a strict locator visibility collision in Playwright tests.
+### 1. Production-Ready Database & Storage Integration
+* **RLS Policies**: Established robust Row Level Security (RLS) policies on the `attachments` table and the `attachments` public storage bucket to restrict operations to authorized project owners/members.
+* **Backend Routers**: Exposed routes under `/api/v1/attachments` for uploading, deleting, and fetching files.
+* **Mock Database and Storage Decoupling**: Implemented in-memory repository states (`_MOCK_ATTACHMENTS_DB`) and bypassed live storage calls for `MOCK_USER_ID`, allowing unit and E2E tests to run in isolation without connecting to external services.
 
-### 2. Environment Variables & CORS Audit
-Solved the CORS preflight OPTIONS blockage and local signup issues:
-*   **Backend CORS Configuration**: Updated `backend/app/core/config.py` to allow ports `5173`/`5174` (for both `localhost` and `127.0.0.1`) and the production Vercel frontend URL.
-*   **Robust CORS Parsing**: Added a Pydantic `field_validator` to `CORS_ORIGINS` to safely parse JSON arrays and comma-separated origin strings.
-*   **Frontend Environment Variables**:
-    *   Set `VITE_API_URL` to `http://localhost:8000` in the local `frontend/.env` file.
-    *   Created `frontend/.env.production` pointing `VITE_API_URL` to the production Render server `https://sprintmind-ai.onrender.com`.
-    *   This ensures local development/testing correctly hits the local backend, while production builds hit the Render backend.
+### 2. Frontend Collaboration Components
+* **useAttachments Hook**: Added a custom hook that manages uploads, deletions, loading states, and integrates with the `useRealtime` hook to handle live PostgreSQL replication events on the `attachments` table.
+* **AttachmentUploader**: Integrated parallel uploading, file drag & drop, progress bars, failed upload retry triggers, and file removal/cancel buttons.
+* **ProjectFilesPage**: Built a dedicated file manager for projects with name search filtering, category filtering (Images, PDFs, Documents), and sorting by upload date, name, and file size.
+* **Task Details Integration**: Rendered task-specific attachments inside the "Task Details" modal under [Tasks.tsx](file:///c:/Users/Tushar/OneDrive/Desktop/SprintMind%20AI/frontend/src/features/tasks/pages/Tasks.tsx).
 
 ---
 
 ## Verification Results
 
-### Build Verification
-*   Ran `npm run build` inside the `frontend/` directory.
-*   The application compiled successfully with the production configurations:
-    ```bash
-    vite v5.4.21 building for production...
-    ✓ built in 4.31s
-    ```
+### Backend Test Coverage
+* Ran `pytest` in `backend` with the local virtual environment.
+* **All 47 tests passed successfully**, including all attachment CRUD operations and the previously failing notifications test:
+```bash
+tests\test_attachments.py ...                                            [ 31%]
+tests\test_notifications.py ....                                         [ 80%]
+======================= 47 passed, 26 warnings in 7.81s =======================
+```
 
-### Playwright E2E Verification
-*   Ran the complete Playwright E2E suite (`npx playwright test`).
-*   **All 35 tests passed successfully**:
-    ```bash
-    Running 35 tests using 1 worker
-    ...
-      35 passed (2.4m)
-    ```
+### Frontend Production Build
+* Ran `npm run build` inside the `frontend/` directory to compile TypeScript and bundle assets.
+* Compile and build finished successfully without errors.

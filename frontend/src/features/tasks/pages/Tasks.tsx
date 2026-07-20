@@ -4,6 +4,8 @@ import { useTasks } from "../hooks/useTasks";
 import { TaskEmptyState } from "../components/TaskEmptyState";
 import { TaskCard } from "../components/TaskCard";
 import { Task, TaskStatus, TaskPriority } from "../types";
+import { CommentList } from "../../comments/components/CommentList";
+import { TaskAttachmentPanel } from "../../attachments/components/TaskAttachmentPanel";
 import { useProjects } from "../../projects/hooks/useProjects";
 import { Card } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
@@ -77,7 +79,20 @@ export const Tasks: React.FC = () => {
     createTask,
     updateTask,
     deleteTask,
+    presenceState,
   } = useTasks(selectedProjectId || undefined);
+
+  // Compute unique active users from presence state
+  const activeUsers = useMemo(() => {
+    if (!presenceState) return [];
+    const users = new Map();
+    Object.values(presenceState).flat().forEach((p: any) => {
+      if (p.userId) {
+        users.set(p.userId, p);
+      }
+    });
+    return Array.from(users.values());
+  }, [presenceState]);
 
   // Local state for optimistic updates
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
@@ -559,6 +574,24 @@ export const Tasks: React.FC = () => {
               <Badge variant="neutral" className="rounded-lg text-[10px] font-bold">
                 {totalTasks} Total
               </Badge>
+              {activeUsers.length > 0 && (
+                <div className="flex -space-x-2 overflow-hidden ml-4">
+                  {activeUsers.slice(0, 5).map((u, i) => (
+                    <div key={u.userId || i} className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-stitch-surface-container flex items-center justify-center text-[10px] font-bold text-stitch-on-surface-variant overflow-hidden" title={u.displayName || "User"}>
+                      {u.avatarUrl ? (
+                        <img src={u.avatarUrl} alt={u.displayName} className="w-full h-full object-cover" />
+                      ) : (
+                        (u.displayName || "?")[0].toUpperCase()
+                      )}
+                    </div>
+                  ))}
+                  {activeUsers.length > 5 && (
+                    <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-stitch-surface-container flex items-center justify-center text-[9px] font-bold text-stitch-on-surface-variant">
+                      +{activeUsers.length - 5}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <p className="text-xs text-stitch-on-surface-variant mt-1.5 leading-relaxed">
               {loading ? "Loading…" : `${totalTasks} tasks total`}
@@ -1097,10 +1130,10 @@ export const Tasks: React.FC = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-stitch-on-surface/40 backdrop-blur-sm p-4 animate-fade-in">
             <div
               id="modal-edit-task"
-              className="bg-white border border-stitch-outline-variant rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-scale-in"
+              className="bg-white border border-stitch-outline-variant rounded-2xl shadow-xl w-full max-w-4xl overflow-hidden animate-scale-in"
             >
               <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-stitch-outline-variant/60">
-                <h2 className="text-base font-bold text-stitch-on-surface font-sans">Edit Task</h2>
+                <h2 className="text-base font-bold text-stitch-on-surface font-sans">Task Details</h2>
                 <button
                   onClick={() => setEditingTask(null)}
                   className="text-stitch-on-surface-variant/40 hover:text-stitch-on-surface transition-colors"
@@ -1108,8 +1141,31 @@ export const Tasks: React.FC = () => {
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="px-6 py-5 select-text">
-                {renderForm(handleEditSubmit, true)}
+              <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-stitch-outline-variant/60 max-h-[85vh] overflow-y-auto">
+                <div className="px-6 py-5 select-text">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-stitch-on-surface-variant/70 mb-4 select-none">Task Properties</h3>
+                  {renderForm(handleEditSubmit, true)}
+                </div>
+                <div className="px-6 py-5 flex flex-col h-[700px] md:h-auto overflow-y-auto gap-6">
+                  <div>
+                    <h3 className="text-xs font-black uppercase tracking-wider text-stitch-on-surface-variant/70 mb-4 select-none">Discussion & Collaboration</h3>
+                    <div className="min-h-[300px] border border-stitch-outline-variant/40 rounded-2xl p-4 bg-stitch-surface-container-low/50">
+                      <CommentList
+                        taskId={editingTask.id}
+                        projectOwnerId={projects.find((p) => p.id === editingTask.project_id)?.owner_id || ""}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black uppercase tracking-wider text-stitch-on-surface-variant/70 mb-4 select-none">Attachments</h3>
+                    <div className="min-h-[300px]">
+                      <TaskAttachmentPanel 
+                        taskId={editingTask.id} 
+                        projectId={editingTask.project_id} 
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

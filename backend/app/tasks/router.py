@@ -105,7 +105,7 @@ async def update_task(
             detail="Access denied: You do not own this task.",
         )
     try:
-        updated = service.update_task(task_id, payload)
+        updated = service.update_task(task_id, payload, current_user.id)
         if not updated:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

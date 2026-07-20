@@ -20,8 +20,10 @@ import {
   AlertCircle,
   Clock,
   CheckCircle2,
-  ChevronDown
+  ChevronDown,
+  FileText
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 type SortOption = "newest" | "oldest" | "name-asc" | "name-desc" | "progress";
 
@@ -35,6 +37,7 @@ export const Projects: React.FC = () => {
     updateProject,
     deleteProject
   } = useProjects();
+  const navigate = useNavigate();
 
   // Load all tasks to compute statistics and progress per project
   const { tasks } = useTasks();
@@ -483,6 +486,16 @@ export const Projects: React.FC = () => {
                               >
                                 <Edit2 className="w-3.5 h-3.5 text-stitch-on-surface-variant" />
                                 Edit Project
+                              </button>
+                              <button
+                                onClick={() => {
+                                  navigate(`/projects/${project.id}/files`);
+                                  setActiveMenuId(null);
+                                }}
+                                className="w-full text-left px-3 py-1.5 text-xs text-stitch-on-surface hover:bg-stitch-surface-container flex items-center gap-2 font-medium"
+                              >
+                                <FileText className="w-3.5 h-3.5 text-stitch-on-surface-variant" />
+                                View Files
                               </button>
                               <button
                                 onClick={() => {

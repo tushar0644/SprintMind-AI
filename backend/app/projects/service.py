@@ -3,9 +3,12 @@ from uuid import UUID
 from app.projects.schemas import ProjectCreate, ProjectUpdate, ProjectResponse
 from app.projects.repository import ProjectRepository
 
+from app.activity.service import ActivityLogService
+
 class ProjectService:
-    def __init__(self, repository: ProjectRepository):
+    def __init__(self, repository: ProjectRepository, activity_service: ActivityLogService):
         self.repository = repository
+        self.activity_service = activity_service
 
     def get_project(self, project_id: UUID) -> Optional[ProjectResponse]:
         """
@@ -23,7 +26,16 @@ class ProjectService:
         """
         Validate and create a new project.
         """
-        return self.repository.create(owner_id, project_data)
+        project = self.repository.create(owner_id, project_data)
+        self.activity_service.create_activity(
+            project_id=project.id,
+            user_id=owner_id,
+            action="project_created",
+            entity_type="project",
+            entity_id=project.id,
+            details={"name": project.name}
+        )
+        return project
 
     def update_project(self, project_id: UUID, project_data: ProjectUpdate) -> Optional[ProjectResponse]:
         """

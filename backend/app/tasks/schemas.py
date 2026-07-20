@@ -29,6 +29,7 @@ class TaskBase(BaseModel):
 
 class TaskCreate(TaskBase):
     project_id: UUID4
+    assignee_id: Optional[UUID4] = None
 
 
 class TaskUpdate(BaseModel):
@@ -36,6 +37,7 @@ class TaskUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=2000)
     status: Optional[str] = Field(None)
     priority: Optional[str] = Field(None)
+    assignee_id: Optional[UUID4] = None
 
     @field_validator("status")
     @classmethod
@@ -56,6 +58,7 @@ class TaskResponse(TaskBase):
     id: UUID4
     project_id: UUID4
     owner_id: UUID4
+    assignee_id: Optional[UUID4] = None
     created_at: datetime
     updated_at: datetime
     deleted_at: Optional[datetime] = None

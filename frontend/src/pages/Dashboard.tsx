@@ -205,7 +205,7 @@ export const Dashboard: React.FC = () => {
     // Tasks activities
     tasks.forEach((t) => {
       const pName = projects.find((p) => p.id === t.project_id)?.name || "Workspace";
-      
+
       feed.push({
         id: `t-create-${t.id}`,
         type: "task_created",
@@ -424,7 +424,7 @@ export const Dashboard: React.FC = () => {
 
             {/* ── Middle Widgets Section ────────────────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              
+
               {/* Productivity Widget */}
               <Card className="lg:col-span-2 p-6 bg-white border border-stitch-outline-variant/60 rounded-2xl shadow-sm flex flex-col justify-between">
                 <div>
@@ -465,7 +465,7 @@ export const Dashboard: React.FC = () => {
               {/* Quick Actions Panel */}
               <Card className="p-6 bg-white border border-stitch-outline-variant/60 rounded-2xl shadow-sm flex flex-col justify-between relative overflow-hidden group">
                 <div className="absolute -right-12 -top-12 w-28 h-28 bg-indigo-500/5 rounded-full blur-2xl transition-all duration-500 group-hover:scale-125" />
-                
+
                 <div>
                   <div className="flex items-center gap-2 mb-5">
                     <Zap className="w-4 h-4 text-amber-500" />
@@ -512,7 +512,7 @@ export const Dashboard: React.FC = () => {
 
             {/* ── Bottom Widgets Grid ───────────────────────────────────── */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              
+
               {/* Recent Projects list */}
               <Card className="p-6 bg-white border border-stitch-outline-variant/60 rounded-2xl shadow-sm flex flex-col">
                 <div className="flex items-center justify-between mb-4">
@@ -543,7 +543,7 @@ export const Dashboard: React.FC = () => {
                               Due {dueDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                             </p>
                           </div>
-                          
+
                           <div className="flex items-center gap-3 shrink-0">
                             <span className="text-[9px] font-bold text-stitch-on-surface-variant bg-stitch-surface-container px-2 py-0.5 rounded-lg border border-stitch-outline-variant/40">
                               {pTasks.length} tasks
@@ -616,7 +616,7 @@ export const Dashboard: React.FC = () => {
                       <div key={event.id} className="relative text-xs">
                         {/* Dot indicator */}
                         <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-stitch-primary border-2 border-white shadow-sm" />
-                        
+
                         <p className="font-bold text-stitch-on-surface leading-tight">{event.title}</p>
                         <div className="flex justify-between items-center text-[9px] text-stitch-on-surface-variant/50 mt-1 font-semibold">
                           <span>{event.projectName}</span>

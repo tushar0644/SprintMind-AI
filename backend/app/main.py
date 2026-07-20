@@ -77,10 +77,20 @@ async def log_http_transactions(request: Request, call_next):
     try:
         response = await call_next(request)
         duration_ms = (time.time() - start_time) * 1000
+        
+        # Log standard completion
         logger.info(
             f"Finished: {request.method} {request.url.path} "
             f"-> Status: {response.status_code} [Latency: {duration_ms:.2f}ms]"
         )
+        
+        # Explicit warning hook for slow requests exceeding 2.0 seconds
+        if duration_ms > 2000.0:
+            logger.warning(
+                f"SLOW TRANSACTION WARNING: {request.method} {request.url.path} "
+                f"took {duration_ms:.2f}ms (threshold: 2000.00ms)"
+            )
+            
         response.headers["X-Request-ID"] = request_id
         return response
     except Exception as exc:
@@ -149,6 +159,27 @@ def read_health() -> HealthResponse:
     Standard load-balancer health-check polling endpoint.
     """
     return HealthResponse(**get_health_status())
+
+@app.get("/api/monitoring/health", tags=["Health"])
+def read_monitoring_health():
+    """
+    Detailed monitoring health-check verifying active DB and AI service connections.
+    """
+    from app.database.client import verify_supabase_connection
+    from app.services.ai_service import get_ai_service
+    
+    supabase_ok = verify_supabase_connection()
+    ai_service = get_ai_service()
+    gemini_ok = getattr(ai_service, "enabled", False)
+    
+    overall_status = "healthy" if (supabase_ok and gemini_ok) else "degraded"
+    
+    return {
+        "status": overall_status,
+        "supabase_connection": "connected" if supabase_ok else "disconnected",
+        "gemini_api": "ready" if gemini_ok else "not_configured_or_failed",
+        "timestamp": time.time()
+    }
 
 # 6. Register Modular Aggregate Routing
 # Future Modules

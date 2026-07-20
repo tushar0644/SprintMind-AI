@@ -61,4 +61,62 @@ export const aiService = {
     );
     return data.analysis;
   },
+
+  getHistory: async (projectId?: string): Promise<any[]> => {
+    const params = projectId ? { params: { project_id: projectId } } : {};
+    const { data } = await axios.get<any[]>(
+      `${config.apiUrl}/api/ai/history`,
+      { ...getHeaders(), ...params }
+    );
+    return data;
+  },
+
+  getHistoryDetail: async (conversationId: string): Promise<any> => {
+    const { data } = await axios.get<any>(
+      `${config.apiUrl}/api/ai/history/${conversationId}`,
+      getHeaders()
+    );
+    return data;
+  },
+
+  deleteHistoryItem: async (conversationId: string): Promise<void> => {
+    await axios.delete(
+      `${config.apiUrl}/api/ai/history/${conversationId}`,
+      getHeaders()
+    );
+  },
+
+  regenerateHistory: async (conversationId: string): Promise<any> => {
+    const { data } = await axios.post<any>(
+      `${config.apiUrl}/api/ai/history/${conversationId}/regenerate`,
+      {},
+      getHeaders()
+    );
+    return data;
+  },
+
+  submitJob: async (toolType: string, projectId: string, payload: any): Promise<any> => {
+    const { data } = await axios.post<any>(
+      `${config.apiUrl}/api/ai/jobs`,
+      { tool_type: toolType, project_id: projectId, payload },
+      getHeaders()
+    );
+    return data;
+  },
+
+  getJobStatus: async (jobId: string): Promise<any> => {
+    const { data } = await axios.get<any>(
+      `${config.apiUrl}/api/ai/jobs/${jobId}`,
+      getHeaders()
+    );
+    return data;
+  },
+
+  getAnalytics: async (): Promise<any> => {
+    const { data } = await axios.get<any>(
+      `${config.apiUrl}/api/ai/analytics`,
+      getHeaders()
+    );
+    return data;
+  },
 };

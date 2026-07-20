@@ -19,6 +19,10 @@ import { TaskPrioritizer } from "./features/ai/pages/TaskPrioritizer";
 import { MeetingNotes } from "./features/ai/pages/MeetingNotes";
 import { DailyStandup } from "./features/ai/pages/DailyStandup";
 import { RiskAnalysis } from "./features/ai/pages/RiskAnalysis";
+import { AIHistory } from "./features/ai/pages/AIHistory";
+import { AIAnalytics } from "./features/ai/pages/AIAnalytics";
+import { Notifications } from "./features/notifications/pages/Notifications";
+import { ProjectFilesPage } from "./features/attachments/components/ProjectFilesPage";
 
 // Custom Error Boundary Component to prevent application blank screens
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
@@ -45,7 +49,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            
+
             <h1 className="text-2xl font-extrabold text-zinc-50 mb-2">Something went wrong</h1>
             <p className="text-sm text-zinc-400 mb-6 font-mono">
               The application encountered a critical runtime error and was unable to proceed.
@@ -86,7 +90,7 @@ export const App: React.FC = () => {
             {/* Protected Dashboard Route */}
             <Route
               path="/dashboard"
-              element = {
+              element={
                 <ProtectedRoute>
                   <Dashboard />
                 </ProtectedRoute>
@@ -94,15 +98,23 @@ export const App: React.FC = () => {
             />
             <Route
               path="/projects"
-              element = {
+              element={
                 <ProtectedRoute>
                   <Projects />
                 </ProtectedRoute>
               }
             />
             <Route
+              path="/projects/:projectId/files"
+              element={
+                <ProtectedRoute>
+                  <ProjectFilesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/tasks"
-              element = {
+              element={
                 <ProtectedRoute>
                   <Tasks />
                 </ProtectedRoute>
@@ -110,7 +122,7 @@ export const App: React.FC = () => {
             />
             <Route
               path="/settings"
-              element = {
+              element={
                 <ProtectedRoute>
                   <Settings />
                 </ProtectedRoute>
@@ -118,7 +130,7 @@ export const App: React.FC = () => {
             />
             <Route
               path="/ai"
-              element = {
+              element={
                 <ProtectedRoute>
                   <AIOverview />
                 </ProtectedRoute>
@@ -126,7 +138,7 @@ export const App: React.FC = () => {
             />
             <Route
               path="/ai/sprint-planner"
-              element = {
+              element={
                 <ProtectedRoute>
                   <SprintPlanner />
                 </ProtectedRoute>
@@ -134,7 +146,7 @@ export const App: React.FC = () => {
             />
             <Route
               path="/ai/project-health"
-              element = {
+              element={
                 <ProtectedRoute>
                   <ProjectHealth />
                 </ProtectedRoute>
@@ -142,7 +154,7 @@ export const App: React.FC = () => {
             />
             <Route
               path="/ai/task-prioritizer"
-              element = {
+              element={
                 <ProtectedRoute>
                   <TaskPrioritizer />
                 </ProtectedRoute>
@@ -150,7 +162,7 @@ export const App: React.FC = () => {
             />
             <Route
               path="/ai/meeting-notes"
-              element = {
+              element={
                 <ProtectedRoute>
                   <MeetingNotes />
                 </ProtectedRoute>
@@ -158,7 +170,7 @@ export const App: React.FC = () => {
             />
             <Route
               path="/ai/daily-standup"
-              element = {
+              element={
                 <ProtectedRoute>
                   <DailyStandup />
                 </ProtectedRoute>
@@ -166,9 +178,34 @@ export const App: React.FC = () => {
             />
             <Route
               path="/ai/risk-analysis"
-              element = {
+              element={
                 <ProtectedRoute>
                   <RiskAnalysis />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ai/history"
+              element={
+                <ProtectedRoute>
+                  <AIHistory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ai/analytics"
+              element={
+                <ProtectedRoute>
+                  <AIAnalytics />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute>
+                  <Notifications />
                 </ProtectedRoute>
               }
             />

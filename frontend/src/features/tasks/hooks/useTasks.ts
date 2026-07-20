@@ -1,14 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
 import { Task, TaskCreatePayload, TaskUpdatePayload } from "../types";
 import { taskService } from "../services/taskService";
+import { useAuthStore } from "../../../store/authStore";
+import { useRealtime } from "../../../hooks/useRealtime";
 
 export const useTasks = (projectId?: string) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTasks = useCallback(async () => {
-    setLoading(true);
+  const profile = useAuthStore((state) => state.profile);
+
+  const fetchTasks = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const data = await taskService.getTasks(projectId);
@@ -16,13 +20,36 @@ export const useTasks = (projectId?: string) => {
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to load tasks.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [projectId]);
 
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
+
+  const { presenceState } = useRealtime({
+    channelName: projectId ? `project_tasks:${projectId}` : `all_tasks`,
+    postgres: [
+      {
+        event: '*',
+        schema: 'public',
+        table: 'tasks',
+        filter: projectId ? `project_id=eq.${projectId}` : undefined,
+        callback: () => {
+          fetchTasks(true);
+        }
+      }
+    ],
+    presence: {
+      key: profile?.id || 'unknown',
+      state: {
+        userId: profile?.id,
+        displayName: profile?.display_name,
+        avatarUrl: profile?.avatar_url,
+      }
+    }
+  });
 
   const createTask = async (payload: TaskCreatePayload) => {
     setError(null);
@@ -69,5 +96,6 @@ export const useTasks = (projectId?: string) => {
     createTask,
     updateTask,
     deleteTask,
+    presenceState,
   };
 };

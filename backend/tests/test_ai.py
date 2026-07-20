@@ -1,7 +1,19 @@
+import pytest
 from fastapi.testclient import TestClient
 from app.main import app
+from app.services.auth import get_current_user
 
 client = TestClient(app)
+
+class MockUser:
+    id = "dbd1fa6e-21ef-42f2-89b5-c0f2ee8cf09c"
+    email = "user-test@sprintmind.ai"
+
+@pytest.fixture(autouse=True)
+def mock_auth():
+    app.dependency_overrides[get_current_user] = lambda: MockUser()
+    yield
+    app.dependency_overrides.clear()
 
 def test_sprint_plan_endpoint():
     response = client.post(

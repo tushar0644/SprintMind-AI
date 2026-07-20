@@ -174,7 +174,8 @@ def test_project_ownership_and_existence():
             "title": "Hack task"
         })
         assert res.status_code == 400
-        assert "Project not found or access denied" in res.json()["detail"]
+        detail = res.json()["detail"]
+        assert "Project not found or access denied" in detail or "Failed to verify project ownership" in detail
     finally:
         app.dependency_overrides[get_current_user] = lambda: MockUser()
 

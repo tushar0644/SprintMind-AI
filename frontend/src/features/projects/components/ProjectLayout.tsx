@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../../store/authStore";
 import { isSupabaseConfigured } from "../../../config";
 import { Badge } from "../../../components/ui/Badge";
+import { NotificationBell } from "../../notifications/components/NotificationBell";
 
 interface ProjectLayoutProps {
   children: React.ReactNode;
@@ -60,6 +61,15 @@ export const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
         </svg>
       ),
     },
+    {
+      to: "/notifications",
+      label: "Notifications",
+      icon: (
+        <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+      ),
+    },
   ];
 
   return (
@@ -74,9 +84,8 @@ export const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
 
       {/* Sidebar Navigation */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 border-r border-stitch-outline-variant bg-white flex flex-col shrink-0 transition-transform duration-300 ease-in-out md:translate-x-0 md:static ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed inset-y-0 left-0 z-40 w-64 border-r border-stitch-outline-variant bg-white flex flex-col shrink-0 transition-transform duration-300 ease-in-out md:translate-x-0 md:static ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         {/* Brand Logo Header */}
         <div className="p-6 border-b border-stitch-outline-variant/60 flex items-center justify-between">
@@ -100,7 +109,7 @@ export const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
         </div>
 
         {/* Navigation Section */}
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="p-4 space-y-1">
           {navItems.map((item) => {
             const isActive = location.pathname === item.to;
             return (
@@ -108,11 +117,10 @@ export const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
                 key={item.to}
                 to={item.to}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-stitch text-xs font-semibold transition-all duration-200 ${
-                  isActive
-                    ? "bg-stitch-primary/10 text-stitch-primary text-indigo-600 border border-stitch-primary/15 shadow-sm"
-                    : "text-stitch-on-surface-variant hover:bg-stitch-surface-container-low hover:text-stitch-on-surface"
-                }`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-stitch text-xs font-semibold transition-all duration-200 ${isActive
+                  ? "bg-stitch-primary/10 text-stitch-primary text-indigo-600 border border-stitch-primary/15 shadow-sm"
+                  : "text-stitch-on-surface-variant hover:bg-stitch-surface-container-low hover:text-stitch-on-surface"
+                  }`}
               >
                 {item.icon}
                 <span>{item.label}</span>
@@ -132,7 +140,9 @@ export const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
             { to: "/ai/task-prioritizer", label: "Task Prioritizer" },
             { to: "/ai/meeting-notes", label: "Meeting Notes" },
             { to: "/ai/daily-standup", label: "Daily Standup" },
-            { to: "/ai/risk-analysis", label: "Risk Analysis" }
+            { to: "/ai/risk-analysis", label: "Risk Analysis" },
+            { to: "/ai/history", label: "History" },
+            { to: "/ai/analytics", label: "Analytics" }
           ].map((subItem) => {
             const isSubActive = location.pathname === subItem.to;
             return (
@@ -140,11 +150,10 @@ export const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
                 key={subItem.to}
                 to={subItem.to}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-2.5 px-3 py-1.5 rounded-stitch text-[11px] font-semibold transition-all duration-200 ${
-                  isSubActive
-                    ? "bg-stitch-primary/10 text-stitch-primary text-indigo-600 border border-stitch-primary/15 shadow-sm"
-                    : "text-stitch-on-surface-variant hover:bg-stitch-surface-container-low hover:text-stitch-on-surface"
-                }`}
+                className={`flex items-center gap-2.5 px-3 py-1.5 rounded-stitch text-[11px] font-semibold transition-all duration-200 ${isSubActive
+                  ? "bg-stitch-primary/10 text-stitch-primary text-indigo-600 border border-stitch-primary/15 shadow-sm"
+                  : "text-stitch-on-surface-variant hover:bg-stitch-surface-container-low hover:text-stitch-on-surface"
+                  }`}
               >
                 <div className={`w-1.5 h-1.5 rounded-full ${isSubActive ? "bg-stitch-primary animate-pulse" : "bg-zinc-300"}`} />
                 <span>{subItem.label}</span>
@@ -205,27 +214,34 @@ export const ProjectLayout: React.FC<ProjectLayoutProps> = ({ children }) => {
               {location.pathname === "/dashboard"
                 ? "Workspace Overview"
                 : location.pathname === "/tasks"
-                ? "Tasks"
-                : location.pathname === "/settings"
-                ? "Settings"
-                : location.pathname === "/ai"
-                ? "AI Assistant Overview"
-                : location.pathname === "/ai/sprint-planner"
-                ? "AI Sprint Planner"
-                : location.pathname === "/ai/project-health"
-                ? "AI Project Health Analyzer"
-                : location.pathname === "/ai/task-prioritizer"
-                ? "AI Task Prioritizer"
-                : location.pathname === "/ai/meeting-notes"
-                ? "AI Meeting Summarizer"
-                : location.pathname === "/ai/daily-standup"
-                ? "AI Daily Standup Reporter"
-                : location.pathname === "/ai/risk-analysis"
-                ? "AI Risk Analyzer"
-                : "Projects Directory"}
+                  ? "Tasks"
+                  : location.pathname === "/settings"
+                    ? "Settings"
+                    : location.pathname === "/ai"
+                      ? "AI Assistant Overview"
+                      : location.pathname === "/ai/sprint-planner"
+                        ? "AI Sprint Planner"
+                        : location.pathname === "/ai/project-health"
+                          ? "AI Project Health Analyzer"
+                          : location.pathname === "/ai/task-prioritizer"
+                            ? "AI Task Prioritizer"
+                            : location.pathname === "/ai/meeting-notes"
+                              ? "AI Meeting Summarizer"
+                              : location.pathname === "/ai/daily-standup"
+                                ? "AI Daily Standup Reporter"
+                                : location.pathname === "/ai/risk-analysis"
+                                  ? "AI Risk Analyzer"
+                                  : location.pathname === "/ai/history"
+                                    ? "AI History"
+                                    : location.pathname === "/ai/analytics"
+                                      ? "AI Analytics Dashboard"
+                                      : location.pathname === "/notifications"
+                                        ? "Notifications"
+                                        : "Projects Directory"}
             </h2>
           </div>
           <div className="flex items-center gap-3">
+            <NotificationBell />
             <Badge variant="neutral">
               {profile?.role || "user"}
             </Badge>
