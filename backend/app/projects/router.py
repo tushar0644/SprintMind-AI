@@ -8,6 +8,9 @@ from app.projects.dependencies import get_project_service
 from app.sprints.schemas import PlanSprintsRequest, PlanSprintsResponse, SprintResponse
 from app.sprints.service import SprintPlanner
 from app.sprints.dependencies import get_sprint_planner
+from app.estimation.schemas import ProjectTimelineResponse, ProjectEstimationResponse
+from app.estimation.estimator import ProjectEstimator
+from app.estimation.dependencies import get_project_estimator
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
@@ -212,4 +215,63 @@ async def get_project_sprints(
         raise HTTPException(status_code=403, detail="Access denied.")
 
     return planner.get_sprints(UUID(str(user_id)), project_id)
+
+
+@router.get("/{project_id}/timeline", response_model=ProjectTimelineResponse)
+async def get_project_timeline(
+    project_id: UUID,
+    sprint_duration_days: int = 14,
+    current_user = Depends(get_current_user),
+    service: ProjectService = Depends(get_project_service),
+    estimator: ProjectEstimator = Depends(get_project_estimator),
+):
+    """
+    Predict sprint completion dates, overall project start/finish dates,
+    milestone targets (MVP, Beta, RC, Production), and velocity forecast.
+    """
+    user_id = getattr(current_user, "id", None) or current_user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    project = service.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    if str(project.owner_id) != str(user_id):
+        raise HTTPException(status_code=403, detail="Access denied.")
+
+    return estimator.get_timeline(
+        owner_id=UUID(str(user_id)),
+        project_id=project_id,
+        sprint_duration_days=sprint_duration_days,
+    )
+
+
+@router.get("/{project_id}/estimation", response_model=ProjectEstimationResponse)
+async def get_project_estimation(
+    project_id: UUID,
+    sprint_duration_days: int = 14,
+    current_user = Depends(get_current_user),
+    service: ProjectService = Depends(get_project_service),
+    estimator: ProjectEstimator = Depends(get_project_estimator),
+):
+    """
+    Generate and retrieve complete project resource estimation, velocity forecast,
+    confidence score, and predicted milestone schedules.
+    """
+    user_id = getattr(current_user, "id", None) or current_user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    project = service.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    if str(project.owner_id) != str(user_id):
+        raise HTTPException(status_code=403, detail="Access denied.")
+
+    return estimator.get_estimation(
+        owner_id=UUID(str(user_id)),
+        project_id=project_id,
+        sprint_duration_days=sprint_duration_days,
+    )
+
 

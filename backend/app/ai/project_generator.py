@@ -6,7 +6,7 @@ from app.projects.repository import ProjectRepository
 from app.tasks.repository import TaskRepository
 from app.ai.mapper import project_mapper
 
-# In-memory database for project epics mock fallback
+# In-memory database for project epics, used exclusively for mock/test users.
 _MOCK_PROJECT_EPICS_DB: List[Dict[str, Any]] = []
 
 
@@ -16,15 +16,9 @@ def get_project_epics(project_id: UUID) -> List[Dict[str, Any]]:
     if is_mock:
         return [e for e in _MOCK_PROJECT_EPICS_DB if str(e["project_id"]) == str(project_id)]
 
-    try:
-        from app.database.client import supabase
-        res = supabase.table("project_epics").select("*").eq("project_id", str(project_id)).execute()
-        return res.data or []
-    except Exception as e:
-        err_msg = str(e)
-        if any(term in err_msg for term in ["project_epics", "42P01", "PGRST205", "PGRST204"]):
-            return [e for e in _MOCK_PROJECT_EPICS_DB if str(e["project_id"]) == str(project_id)]
-        raise e
+    from app.database.client import supabase
+    res = supabase.table("project_epics").select("*").eq("project_id", str(project_id)).execute()
+    return res.data or []
 
 
 def save_project_epic(project_id: UUID, title: str, description: str) -> Dict[str, Any]:
@@ -43,18 +37,11 @@ def save_project_epic(project_id: UUID, title: str, description: str) -> Dict[st
         _MOCK_PROJECT_EPICS_DB.append(payload)
         return payload
 
-    try:
-        from app.database.client import supabase
-        res = supabase.table("project_epics").insert(payload).execute()
-        if res.data:
-            return res.data[0]
-        raise Exception("Failed to insert project epic")
-    except Exception as e:
-        err_msg = str(e)
-        if any(term in err_msg for term in ["project_epics", "42P01", "PGRST205", "PGRST204"]):
-            _MOCK_PROJECT_EPICS_DB.append(payload)
-            return payload
-        raise e
+    from app.database.client import supabase
+    res = supabase.table("project_epics").insert(payload).execute()
+    if res.data:
+        return res.data[0]
+    raise Exception("Failed to insert project epic")
 
 
 class ProjectGenerator:

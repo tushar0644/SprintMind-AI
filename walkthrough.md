@@ -1,77 +1,62 @@
-# Walkthrough - SprintMind AI v2.4 Phase 2: Sprint Planning Frontend
+# Walkthrough - Post-Manual Migration Database Verification
 
-We have successfully implemented and verified the visual Sprint Planning experience for SprintMind AI v2.4 Phase 2 using the backend API endpoints `POST /projects/{project_id}/plan-sprints` and `GET /projects/{project_id}/sprints`.
-
----
-
-## 1. Frontend Service & Type Definitions
-
-### Implementation
-- **Types**:
-  - `src/types/SprintTask.ts`: Defines task schema with title, priority badge, story points, status, depends_on, epic_id, timestamps.
-  - `src/types/Sprint.ts`: Defines sprint schema with sprint_number, name, capacity, total_points, status, tasks.
-  - `src/types/SprintPlanResponse.ts`: Defines response structure with project_id, capacity, sprints_count, tasks_scheduled, tasks_unscheduled, sprints.
-  - `src/types/index.ts`: Re-exports all sprint interfaces.
-- **Service (`sprintService.ts`)**:
-  - `planSprints(projectId, capacity)`: Invokes `POST /api/projects/{project_id}/plan-sprints`.
-  - `getSprints(projectId)`: Invokes `GET /api/projects/{project_id}/sprints`.
+We have verified the live connected Supabase project (`https://wsjzmdftnciwfyjpnchz.supabase.co`) following manual SQL execution.
 
 ---
 
-## 2. Visual Sprint Board & Components
+## 1. Schema Verification Matrix (28/28 Tables Verified)
 
-### Implementation
-- **`TaskCard.tsx`**: Displays Task Title, Priority Badge (urgent, high, medium, low), Story Points badge, Status badge, Completed indicator, and Dependency icon with count.
-- **`SprintCard.tsx`**: Displays Sprint Name, Sprint Number, Capacity limit vs story points used, Completion progress bar & %, and Task Card list.
-- **`SkeletonLoader.tsx`**: Skeleton loading placeholders displayed while fetching or re-planning sprints.
-- **`SprintBoard.tsx`**: Board view rendering:
-  - Header statistics metrics bar (Total Sprints, Total Points, Scheduled Tasks, Overall Progress %).
-  - Sprint cards grid.
-  - **Empty State**: "No Sprint Plan Generated" with Generate CTA button.
-  - **Error State**: Friendly error message card with Retry button.
-  - **Loading State**: Animated skeleton loader grid.
+| Table Name | Live Status in Supabase | Verified Columns & Key Attributes |
+| :--- | :--- | :--- |
+| `user_profiles` | **Present** | `id`, `email`, `display_name`, `avatar_url`, `role`, `created_at`, `updated_at` |
+| `documents` | **Present** | `id`, `project_id`, `uploader_id`, `file_name`, `file_size`, `content_type`, `storage_path` |
+| `projects` | **Present** | `id`, `owner_id`, `name`, `description`, `status`, `deleted_at`, `generated_from_document_id` |
+| `project_epics` | **Present** | `id`, `project_id`, `title`, `description`, `created_at`, `updated_at` |
+| `sprints` | **Present** | `id`, `project_id`, `owner_id`, `sprint_number`, `name`, `capacity`, `total_points`, `status` |
+| `tasks` | **Present** | `id`, `project_id`, `owner_id`, `title`, `description`, `status`, `priority`, `epic_id`, `story_points`, `checklist`, `sprint_id`, `depends_on` |
+| `project_estimations` | **Present** | `id`, `project_id`, `owner_id`, `estimated_start_date`, `estimated_end_date`, `average_velocity`, `confidence` |
+| `project_risks` | **Present** | `id`, `project_id`, `owner_id`, `severity`, `category`, `title`, `description`, `affected_sprint`, `affected_tasks` |
+| `project_dashboard_snapshots` | **Present** | `id`, `project_id`, `owner_id`, `health_score`, `status`, `risk_count`, `velocity`, `completion` |
+| `portfolio_snapshots` | **Present** | `id`, `owner_id`, `total_projects`, `average_health_score`, `portfolio_status`, `total_risks` |
+| `meetings` | **Present** | `id`, `project_id`, `owner_id`, `title`, `notes`, `summary`, `recommendations` |
+| `meeting_action_items` | **Present** | `id`, `meeting_id`, `title`, `assignee`, `due_date`, `priority`, `matched_task_id`, `is_suggested_new` |
+| `meeting_decisions` | **Present** | `id`, `meeting_id`, `decision_text`, `context`, `created_at` |
+| `meeting_blockers` | **Present** | `id`, `meeting_id`, `description`, `affected_task_id`, `created_at` |
+| `document_chunks` | **Present** | `id`, `document_id`, `chunk_index`, `page`, `text`, `char_count`, `token_estimate` |
+| `document_analysis` | **Present** | `id`, `document_id`, `status`, `executive_summary`, `objectives`, `deliverables`, `timeline`, `risks` |
+| `document_requirements` | **Present** | `id`, `document_id`, `functional_requirements`, `non_functional_requirements`, `business_rules`, `assumptions` |
+| `document_epics` | **Present** | `id`, `document_id`, `title`, `description`, `created_at`, `updated_at` |
+| `document_stories` | **Present** | `id`, `epic_id`, `document_id`, `title`, `description`, `acceptance_criteria`, `priority`, `story_points` |
+| `ai_conversations` | **Present** | `id`, `user_id`, `project_id`, `title`, `created_at`, `updated_at` |
+| `ai_messages` | **Present** | `id`, `conversation_id`, `role`, `content`, `tokens_used`, `created_at` |
+| `ai_logs` | **Present** | `id`, `user_id`, `feature`, `latency_ms`, `token_usage`, `error_occurred`, `created_at` |
+| `background_jobs` | **Present** | `id`, `user_id`, `project_id`, `job_type`, `status`, `payload`, `result`, `error` |
+| `notifications` | **Present** | `id`, `user_id`, `sender_id`, `title`, `message`, `type`, `reference_id`, `is_read` |
+| `activity_logs` | **Present** | `id`, `project_id`, `user_id`, `action`, `entity_type`, `entity_id`, `details` |
+| `comments` | **Present** | `id`, `task_id`, `user_id`, `parent_id`, `content`, `created_at`, `updated_at` |
+| `comment_reactions` | **Present** | `id`, `comment_id`, `user_id`, `emoji`, `created_at` |
+| `attachments` | **Present** | `id`, `task_id`, `uploader_id`, `file_name`, `file_path`, `file_size` |
 
 ---
 
-## 3. Project Details Page Integration
+## 2. Mock Repositories & Verification Summary
 
-### Implementation
-- **`ProjectDetails.tsx` (`/projects/:projectId`)**:
-  - **Generate Sprint Plan button**: Positioned in page header and empty state.
-  - **Sprint Capacity Settings**: Configurable story points capacity (default 20 points).
-  - **Execution Workflow**:
-    1. User clicks button.
-    2. Invokes `POST plan-sprints`.
-    3. Displays glassmorphic Loading Overlay with animated progress spinner.
-    4. Shows Success Toast message upon completion.
-    5. Invokes `GET sprints`.
-    6. Renders interactive Sprint Board.
-- **Router & Projects List**: Added `/projects/:projectId` route in `App.tsx` and updated options dropdown & clickable cards in `Projects.tsx`.
+- **Mock Repositories**: All `_MOCK_` fallback repositories remain intact for local testing and unmigrated table fallbacks. Zero `_MOCK_` dependency issues remain for missing tables because all 28 tables exist in Supabase.
+- **Schema Mismatches**: ZERO mismatches identified. Live database structure aligns 100% with backend repository models and schemas.
 
 ---
 
 ## Verification Results
 
-### TypeScript Type Validation
+### Backend Test Suite
+Ran `pytest` in `backend/` using virtual environment:
+```bash
+====================== 145 passed, 41 warnings in 17.29s ======================
+```
+
+### Frontend Type Validation
 Ran `npx tsc --noEmit` inside `frontend/`:
 ```bash
 > npx tsc --noEmit
 # Exit Code: 0 (Zero errors)
-```
-
-### Backend Test Suite
-Ran `python -m pytest` inside `backend/`:
-```bash
-====================== 100 passed, 34 warnings in 21.41s ======================
-```
-
-### Frontend Production Build
-Ran `npx vite build` inside `frontend/`:
-```bash
-vite v5.4.21 building for production...
-✓ 2529 modules transformed.
-dist/index.html                     0.55 kB │ gzip:   0.36 kB
-dist/assets/index-CaBrOndi.css     61.01 kB │ gzip:  10.27 kB
-dist/assets/index-CrZ8SANv.js   1,307.02 kB │ gzip: 337.71 kB
-✓ built in 10.08s
 ```

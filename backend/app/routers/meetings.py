@@ -1,3 +1,3 @@
-from fastapi import APIRouter
+from app.meetings.router import router
 
-router = APIRouter(prefix="/meetings", tags=["Meetings"])
+__all__ = ["router"]

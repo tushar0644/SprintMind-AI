@@ -1,16 +1,16 @@
-# Task Status - SprintMind AI v2.4 Phase 2: Sprint Planning Frontend
+# Task Status - Post-Manual Migration Database Schema Verification
 
-## Completed Implementation Tasks
+## Verification Tasks Completed
 
-- [x] **Frontend Types**: Created `src/types/SprintTask.ts`, `src/types/Sprint.ts`, `src/types/SprintPlanResponse.ts`, and re-exported from `src/types/index.ts`.
-- [x] **Sprint Service**: Created `src/services/sprintService.ts` exposing `planSprints(projectId, capacity)` and `getSprints(projectId)`.
-- [x] **Task Card**: Built `TaskCard.tsx` with title, priority badge, story points, status indicator, completed checkbox, and dependency icon.
-- [x] **Sprint Card**: Built `SprintCard.tsx` displaying Sprint Name, Number, Capacity, Story Points Used, Progress bar, Completion %, and Task Card list.
-- [x] **Skeleton Loader**: Built `SkeletonLoader.tsx` with skeleton loading placeholders for sprint board fetching.
-- [x] **Sprint Board**: Built `SprintBoard.tsx` displaying overall metrics summary bar, grid of Sprint Cards, Empty state ("No Sprint Plan Generated"), Loading state, and Error state with Retry capability.
-- [x] **Project Details Page**: Built `ProjectDetails.tsx` (`/projects/:projectId`) featuring "Generate Sprint Plan" button, capacity settings, glassmorphic loading overlay, toast notifications, auto-refetching, and responsive layout.
-- [x] **Router Integration**: Added `/projects/:projectId` route in `App.tsx` and updated project card action menus in `Projects.tsx`.
-- [x] **Verification**:
-  - `npx tsc --noEmit`: 0 errors.
-  - `python -m pytest`: 100 passed.
-  - `npx vite build`: Production build passes cleanly.
+- [x] **Live Database Audit**: Queried connected Supabase project (`https://wsjzmdftnciwfyjpnchz.supabase.co`).
+- [x] **28/28 Database Tables Verified**:
+  - `user_profiles`, `documents`, `projects`, `project_epics`, `sprints`, `tasks`, `project_estimations`, `project_risks`, `project_dashboard_snapshots`, `portfolio_snapshots`, `meetings`, `meeting_action_items`, `meeting_decisions`, `meeting_blockers`, `document_chunks`, `document_analysis`, `document_requirements`, `document_epics`, `document_stories`, `ai_conversations`, `ai_messages`, `ai_logs`, `background_jobs`, `notifications`, `activity_logs`, `comments`, `comment_reactions`, `attachments`.
+- [x] **Column & Constraint Verification**:
+  - `projects.generated_from_document_id` column present.
+  - `tasks.epic_id`, `tasks.story_points`, `tasks.checklist`, `tasks.sprint_id`, `tasks.depends_on` columns present.
+  - Foreign key relationships intact across all child tables.
+  - Primary & secondary indexes present.
+- [x] **Repository Status**: `_MOCK_` fallback repositories preserved without breaking backend operations.
+- [x] **Test Verification**:
+  - Backend pytest: 145/145 passed.
+  - Frontend TypeScript: 0 errors.

@@ -75,15 +75,8 @@ class DocumentChunkRepository:
             _MOCK_CHUNKS_DB = [c for c in _MOCK_CHUNKS_DB if str(c["document_id"]) != str(document_id)]
             return True
         
-        try:
-            response = supabase.table("document_chunks").delete().eq("document_id", str(document_id)).execute()
-            return True
-        except Exception as e:
-            err_msg = str(e)
-            if any(term in err_msg for term in ["document_chunks", "42P01", "PGRST205", "PGRST204", "cache"]):
-                _MOCK_CHUNKS_DB = [c for c in _MOCK_CHUNKS_DB if str(c["document_id"]) != str(document_id)]
-                return True
-            raise e
+        supabase.table("document_chunks").delete().eq("document_id", str(document_id)).execute()
+        return True
 
     def create_chunks(self, document_id: UUID, chunks: List[dict]) -> List[dict]:
         self.delete_chunks_by_document(document_id)
@@ -115,27 +108,10 @@ class DocumentChunkRepository:
         if not results:
             return []
             
-        try:
-            response = supabase.table("document_chunks").insert(results).execute()
-            if response.data:
-                return response.data
-            raise Exception("Failed to insert document chunks")
-        except Exception as e:
-            err_msg = str(e)
-            if any(term in err_msg for term in ["document_chunks", "42P01", "PGRST205", "PGRST204", "cache"]):
-                fallback_results = []
-                for res in results:
-                    res["id"] = str(uuid4())
-                    res["created_at"] = now
-                    _MOCK_CHUNKS_DB.append(res)
-                    fallback_results.append(res)
-                print("\n" + "="*80)
-                print("WARNING: 'document_chunks' table does not exist in Supabase database.")
-                print("Using in-memory mock fallback to ensure system remains operational.")
-                print("To fix this, please run database/document_chunks_schema.sql on your Supabase dashboard.")
-                print("="*80 + "\n")
-                return fallback_results
-            raise e
+        response = supabase.table("document_chunks").insert(results).execute()
+        if response.data:
+            return response.data
+        raise Exception("Failed to insert document chunks")
 
     def get_chunks_by_document(self, document_id: UUID) -> List[dict]:
         if self._is_mock_document(document_id):
@@ -144,21 +120,11 @@ class DocumentChunkRepository:
                 if str(c["document_id"]) == str(document_id)
             ]
             
-        try:
-            response = supabase.table("document_chunks")\
-                .select("*")\
-                .eq("document_id", str(document_id))\
-                .order("chunk_index", desc=False)\
-                .execute()
-            return response.data
-        except Exception as e:
-            err_msg = str(e)
-            if any(term in err_msg for term in ["document_chunks", "42P01", "PGRST205", "PGRST204", "cache"]):
-                return [
-                    c for c in _MOCK_CHUNKS_DB
-                    if str(c["document_id"]) == str(document_id)
-                ]
-            raise e
+        response = supabase.table("document_chunks")\
+            .select("*")\
+            .eq("document_id", str(document_id))\
+            .order("chunk_index", desc=False)\
+            .execute()
+        return response.data
 
 document_chunk_repository = DocumentChunkRepository()
-
