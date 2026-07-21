@@ -21,7 +21,8 @@ import {
   Clock,
   CheckCircle2,
   ChevronDown,
-  FileText
+  FileText,
+  Kanban
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -426,7 +427,8 @@ export const Projects: React.FC = () => {
                 <Card
                   key={project.id}
                   hoverable={true}
-                  className="project-card border-stitch-outline-variant hover:border-stitch-primary/30 flex flex-col justify-between hover:scale-[1.01] hover:shadow-md transition-all duration-300 bg-white rounded-2xl p-6 relative group"
+                  onClick={() => navigate(`/projects/${project.id}`)}
+                  className="project-card border-stitch-outline-variant hover:border-stitch-primary/30 flex flex-col justify-between hover:scale-[1.01] hover:shadow-md transition-all duration-300 bg-white rounded-2xl p-6 relative group cursor-pointer"
                 >
                   <div className="space-y-4">
                     {/* Header: Logo, Status Badge, and Actions */}
@@ -481,7 +483,22 @@ export const Projects: React.FC = () => {
                               className="absolute right-0 mt-1 w-36 bg-white border border-stitch-outline-variant rounded-xl shadow-xl z-30 py-1.5 animate-scale-in"
                             >
                               <button
-                                onClick={() => handleOpenEdit(project)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/projects/${project.id}`);
+                                  setActiveMenuId(null);
+                                }}
+                                className="w-full text-left px-3 py-1.5 text-xs text-stitch-on-surface hover:bg-stitch-surface-container flex items-center gap-2 font-medium"
+                              >
+                                <Kanban className="w-3.5 h-3.5 text-indigo-600" />
+                                Sprint Plan
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenEdit(project);
+                                  setActiveMenuId(null);
+                                }}
                                 className="w-full text-left px-3 py-1.5 text-xs text-stitch-on-surface hover:bg-stitch-surface-container flex items-center gap-2 font-medium"
                               >
                                 <Edit2 className="w-3.5 h-3.5 text-stitch-on-surface-variant" />

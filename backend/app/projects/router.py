@@ -5,6 +5,9 @@ from app.services.auth import get_current_user
 from app.projects.schemas import ProjectCreate, ProjectUpdate, ProjectResponse
 from app.projects.service import ProjectService
 from app.projects.dependencies import get_project_service
+from app.sprints.schemas import PlanSprintsRequest, PlanSprintsResponse, SprintResponse
+from app.sprints.service import SprintPlanner
+from app.sprints.dependencies import get_sprint_planner
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
@@ -155,4 +158,58 @@ async def get_generated_project_summary(
         "epics_count": len(epics),
         "tasks_count": len(tasks)
     }
+
+
+@router.post("/{project_id}/plan-sprints", response_model=PlanSprintsResponse)
+async def plan_sprints(
+    project_id: UUID,
+    payload: PlanSprintsRequest = PlanSprintsRequest(),
+    current_user = Depends(get_current_user),
+    service: ProjectService = Depends(get_project_service),
+    planner: SprintPlanner = Depends(get_sprint_planner),
+):
+    """
+    Prioritize project tasks, respect their dependencies, and allocate them
+    into sequential sprints bounded by the given story-point capacity.
+    Regenerates sprint assignments for the project from scratch each call.
+    """
+    user_id = getattr(current_user, "id", None) or current_user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    project = service.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    if str(project.owner_id) != str(user_id):
+        raise HTTPException(status_code=403, detail="Access denied.")
+
+    try:
+        return planner.plan_sprints(UUID(str(user_id)), project_id, payload.capacity)
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to plan sprints: {str(e)}")
+
+
+@router.get("/{project_id}/sprints", response_model=List[SprintResponse])
+async def get_project_sprints(
+    project_id: UUID,
+    current_user = Depends(get_current_user),
+    service: ProjectService = Depends(get_project_service),
+    planner: SprintPlanner = Depends(get_sprint_planner),
+):
+    """
+    Get the current sprint plan (sprints with their assigned tasks) for a project.
+    """
+    user_id = getattr(current_user, "id", None) or current_user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    project = service.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    if str(project.owner_id) != str(user_id):
+        raise HTTPException(status_code=403, detail="Access denied.")
+
+    return planner.get_sprints(UUID(str(user_id)), project_id)
 

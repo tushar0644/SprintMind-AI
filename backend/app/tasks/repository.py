@@ -189,6 +189,7 @@ class TaskRepository:
                 epic_id=task_data.epic_id,
                 story_points=task_data.story_points if task_data.story_points is not None else 1,
                 checklist=task_data.checklist if task_data.checklist is not None else [],
+                depends_on=task_data.depends_on if task_data.depends_on is not None else [],
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),
                 deleted_at=None
@@ -223,13 +224,15 @@ class TaskRepository:
                 insert_payload["story_points"] = task_data.story_points
             if task_data.checklist is not None:
                 insert_payload["checklist"] = task_data.checklist
+            if task_data.depends_on is not None:
+                insert_payload["depends_on"] = [str(d) for d in task_data.depends_on]
 
             try:
                 res = supabase.table("tasks").insert(insert_payload).execute()
             except Exception as ins_err:
-                if any(col in str(ins_err) for col in ["epic_id", "story_points", "checklist"]):
+                if any(col in str(ins_err) for col in ["epic_id", "story_points", "checklist", "depends_on"]):
                     print("New task columns missing in DB. Retrying insert without them.")
-                    for col in ["epic_id", "story_points", "checklist"]:
+                    for col in ["epic_id", "story_points", "checklist", "depends_on"]:
                         if col in insert_payload:
                             del insert_payload[col]
                     res = supabase.table("tasks").insert(insert_payload).execute()
@@ -255,6 +258,7 @@ class TaskRepository:
                 epic_id=task_data.epic_id,
                 story_points=task_data.story_points if task_data.story_points is not None else 1,
                 checklist=task_data.checklist if task_data.checklist is not None else [],
+                depends_on=task_data.depends_on if task_data.depends_on is not None else [],
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),
                 deleted_at=None
@@ -284,6 +288,10 @@ class TaskRepository:
                     t.story_points = task_data.story_points
                 if task_data.checklist is not None:
                     t.checklist = task_data.checklist
+                if task_data.depends_on is not None:
+                    t.depends_on = task_data.depends_on
+                if task_data.sprint_id is not None:
+                    t.sprint_id = task_data.sprint_id
                 t.updated_at = datetime.now(timezone.utc)
                 return t
 
@@ -307,15 +315,19 @@ class TaskRepository:
             update_payload["story_points"] = task_data.story_points
         if task_data.checklist is not None:
             update_payload["checklist"] = task_data.checklist
+        if task_data.depends_on is not None:
+            update_payload["depends_on"] = [str(d) for d in task_data.depends_on]
+        if task_data.sprint_id is not None:
+            update_payload["sprint_id"] = str(task_data.sprint_id)
         update_payload["updated_at"] = datetime.now(timezone.utc).isoformat()
 
         try:
             try:
                 res = supabase.table("tasks").update(update_payload).eq("id", str(task_id)).execute()
             except Exception as upd_err:
-                if any(col in str(upd_err) for col in ["epic_id", "story_points", "checklist"]):
+                if any(col in str(upd_err) for col in ["epic_id", "story_points", "checklist", "depends_on", "sprint_id"]):
                     print("New task columns missing in DB on update. Retrying update without them.")
-                    for col in ["epic_id", "story_points", "checklist"]:
+                    for col in ["epic_id", "story_points", "checklist", "depends_on", "sprint_id"]:
                         if col in update_payload:
                             del update_payload[col]
                     res = supabase.table("tasks").update(update_payload).eq("id", str(task_id)).execute()
@@ -345,6 +357,10 @@ class TaskRepository:
                         t.story_points = task_data.story_points
                     if task_data.checklist is not None:
                         t.checklist = task_data.checklist
+                    if task_data.depends_on is not None:
+                        t.depends_on = task_data.depends_on
+                    if task_data.sprint_id is not None:
+                        t.sprint_id = task_data.sprint_id
                     t.updated_at = datetime.now(timezone.utc)
                     return t
             return None

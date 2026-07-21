@@ -10,6 +10,7 @@ import { ResetPassword } from "./pages/ResetPassword";
 import { Verify } from "./pages/Verify";
 import { Dashboard } from "./pages/Dashboard";
 import { Projects } from "./features/projects/pages/Projects";
+import { ProjectDetails } from "./features/projects/pages/ProjectDetails";
 import { Tasks } from "./features/tasks/pages/Tasks";
 import { Settings } from "./pages/Settings";
 import { AIOverview } from "./features/ai/pages/AIOverview";
@@ -102,6 +103,14 @@ export const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <Projects />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/projects/:projectId"
+              element={
+                <ProtectedRoute>
+                  <ProjectDetails />
                 </ProtectedRoute>
               }
             />

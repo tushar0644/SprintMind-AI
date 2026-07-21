@@ -1,69 +1,77 @@
-# Walkthrough - SprintMind AI Collaboration, Requirements & Stories (v2.3)
+# Walkthrough - SprintMind AI v2.4 Phase 2: Sprint Planning Frontend
 
-We have successfully built and verified the complete AI agile planning suite for Sprint v2.3: Attachment Collaboration, Requirements Extraction, and Epic & User Story Generation. All tasks are complete, and all tests pass.
-
----
-
-## 1. Attachments & File Collaboration
-
-### Changes Implemented
-* **Database & Storage Policies**: Set Row-Level Security (RLS) on the `attachments` table and public storage bucket. Falls back to mock repository logic for test users.
-* **Backend Routers**: Exposed attachment CRUD routes under `/api/v1/attachments`.
-* **Visual Components**:
-  * **AttachmentUploader**: Integrated parallel uploading, drag-and-drop, and progress indicators.
-  * **ProjectFilesPage**: Dedicated project files manager with name/category filtering (Images, PDFs, Documents) and sorting.
-  * **Task Details Attachment Integration**: Task-specific attachments inside the "Task Details" modal.
+We have successfully implemented and verified the visual Sprint Planning experience for SprintMind AI v2.4 Phase 2 using the backend API endpoints `POST /projects/{project_id}/plan-sprints` and `GET /projects/{project_id}/sprints`.
 
 ---
 
-## 2. AI Requirements Extraction (Phase 3.2)
+## 1. Frontend Service & Type Definitions
 
-### Changes Implemented
-* **SQL Migration**: Created `database/document_requirements_schema.sql` defining requirements table.
-* **Backend AI Module**:
-  * **Requirements Model**: Added schemas in `requirements.py`.
-  * **Validators**: Added structure validation.
-  * **Extractor**: Gemini Flash 1.5 API wrapper with markdown parsing cleanups.
-* **Frontend Accordion UI**:
-  * **Tab Integration**: Added "AI Requirements" tab in the Document Viewer.
-  * **Accordion UI**: Collapsible sections for Functional/Non-Functional Requirements, Business Rules, Assumptions, Dependencies, and Risks.
+### Implementation
+- **Types**:
+  - `src/types/SprintTask.ts`: Defines task schema with title, priority badge, story points, status, depends_on, epic_id, timestamps.
+  - `src/types/Sprint.ts`: Defines sprint schema with sprint_number, name, capacity, total_points, status, tasks.
+  - `src/types/SprintPlanResponse.ts`: Defines response structure with project_id, capacity, sprints_count, tasks_scheduled, tasks_unscheduled, sprints.
+  - `src/types/index.ts`: Re-exports all sprint interfaces.
+- **Service (`sprintService.ts`)**:
+  - `planSprints(projectId, capacity)`: Invokes `POST /api/projects/{project_id}/plan-sprints`.
+  - `getSprints(projectId)`: Invokes `GET /api/projects/{project_id}/sprints`.
 
 ---
 
-## 3. AI Epic & User Story Generation (Phase 3.3)
+## 2. Visual Sprint Board & Components
 
-### Changes Implemented
-* **SQL Migration**: Created `database/document_stories_schema.sql` defining `document_epics` and `document_stories` relational tables.
-* **Backend AI Module**:
-  * **Epics & Stories Models**: Added schemas in `epics.py` and `stories.py`.
-  * **Planner**: Implemented `planner.py` coordinating Gemini story generation prompts, structure checks, database persists, and automatic requirements-extraction chaining.
-* **Frontend Stories Tab**:
-  * **Tab Integration**: Added "AI User Stories" tab in the Document Viewer.
-  * **Tree Accordion UI**: Renders epics as collapsible header cards with user story counts. Inside, nests stories showing description, priority levels, story point estimates, and bulleted acceptance criteria.
-  * **Race Condition Fix**: Added document ID checkpoints preventing asynchronous GET requests from resetting state to null during active generation.
+### Implementation
+- **`TaskCard.tsx`**: Displays Task Title, Priority Badge (urgent, high, medium, low), Story Points badge, Status badge, Completed indicator, and Dependency icon with count.
+- **`SprintCard.tsx`**: Displays Sprint Name, Sprint Number, Capacity limit vs story points used, Completion progress bar & %, and Task Card list.
+- **`SkeletonLoader.tsx`**: Skeleton loading placeholders displayed while fetching or re-planning sprints.
+- **`SprintBoard.tsx`**: Board view rendering:
+  - Header statistics metrics bar (Total Sprints, Total Points, Scheduled Tasks, Overall Progress %).
+  - Sprint cards grid.
+  - **Empty State**: "No Sprint Plan Generated" with Generate CTA button.
+  - **Error State**: Friendly error message card with Retry button.
+  - **Loading State**: Animated skeleton loader grid.
+
+---
+
+## 3. Project Details Page Integration
+
+### Implementation
+- **`ProjectDetails.tsx` (`/projects/:projectId`)**:
+  - **Generate Sprint Plan button**: Positioned in page header and empty state.
+  - **Sprint Capacity Settings**: Configurable story points capacity (default 20 points).
+  - **Execution Workflow**:
+    1. User clicks button.
+    2. Invokes `POST plan-sprints`.
+    3. Displays glassmorphic Loading Overlay with animated progress spinner.
+    4. Shows Success Toast message upon completion.
+    5. Invokes `GET sprints`.
+    6. Renders interactive Sprint Board.
+- **Router & Projects List**: Added `/projects/:projectId` route in `App.tsx` and updated options dropdown & clickable cards in `Projects.tsx`.
 
 ---
 
 ## Verification Results
 
-### Backend Test Coverage
-Ran `pytest` in `backend` with the local virtual environment. **All 86 tests passed successfully**:
+### TypeScript Type Validation
+Ran `npx tsc --noEmit` inside `frontend/`:
 ```bash
-tests\test_attachments.py ...                                            [ 30%]
-tests\test_ai_requirements.py ........                                   [ 90%]
-tests\test_ai_stories.py .....                                           [100%]
-====================== 86 passed, 33 warnings in 13.00s =======================
+> npx tsc --noEmit
+# Exit Code: 0 (Zero errors)
+```
+
+### Backend Test Suite
+Ran `python -m pytest` inside `backend/`:
+```bash
+====================== 100 passed, 34 warnings in 21.41s ======================
 ```
 
 ### Frontend Production Build
-Ran `npx tsc --noEmit` inside the `frontend/` directory. Compile finished successfully without errors.
-
-### Playwright E2E Tests
-Ran Playwright tests:
+Ran `npx vite build` inside `frontend/`:
 ```bash
-  ok 1 [chromium] › e2e\documents.spec.ts:60:3 › Documents Page E2E Tests › 1. Document upload, filter, preview and delete lifecycle (43.5s)
-  ok 2 [chromium] › e2e\documents.spec.ts:145:3 › Documents Page E2E Tests › 2. Document chunking flow (27.1s)
-  ok 3 [chromium] › e2e\documents.spec.ts:211:3 › Documents Page E2E Tests › 3. AI Document Analysis flow (17.6s)
-  ok 4 [chromium] › e2e\requirements.spec.ts:73:3 › Document Requirements E2E Tests › AI Requirements Extraction and collapsible section verification (28.2s)
-  ok 5 [chromium] › e2e\stories.spec.ts:60:3 › Document Stories E2E Tests › AI Epic and User Story generation and collapsible section verification (33.4s)
+vite v5.4.21 building for production...
+✓ 2529 modules transformed.
+dist/index.html                     0.55 kB │ gzip:   0.36 kB
+dist/assets/index-CaBrOndi.css     61.01 kB │ gzip:  10.27 kB
+dist/assets/index-CrZ8SANv.js   1,307.02 kB │ gzip: 337.71 kB
+✓ built in 10.08s
 ```

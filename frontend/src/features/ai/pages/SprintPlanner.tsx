@@ -93,14 +93,27 @@ export const SprintPlanner: React.FC = () => {
   return (
     <ProjectLayout>
       <div className="space-y-6 max-w-4xl mx-auto px-4 py-6">
-        <div className="border-b border-stitch-outline-variant/60 pb-5 select-none">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-indigo-600" />
-            <h1 className="text-xl font-bold tracking-tight text-stitch-on-surface font-sans">Sprint Planner</h1>
+        <div className="border-b border-stitch-outline-variant/60 pb-5 select-none flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-indigo-600" />
+              <h1 className="text-xl font-bold tracking-tight text-stitch-on-surface font-sans">Sprint Planner</h1>
+            </div>
+            <p className="text-xs text-stitch-on-surface-variant mt-1">
+              Define goals and construct a full backlog structure using Gemini through background jobs.
+            </p>
           </div>
-          <p className="text-xs text-stitch-on-surface-variant mt-1">
-            Define goals and construct a full backlog structure using Gemini through background jobs.
-          </p>
+
+          {selectedProjectId && (
+            <Button
+              onClick={() => window.location.href = `/projects/${selectedProjectId}`}
+              variant="secondary"
+              size="sm"
+              className="bg-white border border-stitch-outline-variant hover:bg-stitch-surface-container rounded-xl text-xs font-bold text-stitch-on-surface flex items-center gap-1.5 shrink-0"
+            >
+              <span>View Visual Sprint Board</span>
+            </Button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

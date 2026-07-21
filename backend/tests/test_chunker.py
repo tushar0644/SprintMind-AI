@@ -124,6 +124,7 @@ def test_chunk_api_endpoints_workflow():
     }
     res = client.post(f"/api/v1/documents/{doc_id}/chunk", json=payload)
     assert res.status_code == 200
+    
     chunks = res.json()
     assert len(chunks) > 0
     assert chunks[0]["document_id"] == doc_id

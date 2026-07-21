@@ -14,6 +14,7 @@ class TaskBase(BaseModel):
     epic_id: Optional[UUID4] = Field(None, description="Associated project epic ID")
     story_points: Optional[int] = Field(1, description="Story point estimate")
     checklist: Optional[List[str]] = Field(default_factory=list, description="Task checklist items")
+    depends_on: Optional[List[UUID4]] = Field(default_factory=list, description="Task IDs that must be completed before this task can be scheduled")
 
     @field_validator("status")
     @classmethod
@@ -44,6 +45,8 @@ class TaskUpdate(BaseModel):
     epic_id: Optional[UUID4] = Field(None)
     story_points: Optional[int] = Field(None)
     checklist: Optional[List[str]] = Field(None)
+    depends_on: Optional[List[UUID4]] = Field(None)
+    sprint_id: Optional[UUID4] = Field(None)
 
     @field_validator("status")
     @classmethod
@@ -65,6 +68,7 @@ class TaskResponse(TaskBase):
     project_id: UUID4
     owner_id: UUID4
     assignee_id: Optional[UUID4] = None
+    sprint_id: Optional[UUID4] = None
     created_at: datetime
     updated_at: datetime
     deleted_at: Optional[datetime] = None
