@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, UUID4, field_validator
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 VALID_STATUSES = ("todo", "in_progress", "done", "cancelled")
@@ -11,6 +11,9 @@ class TaskBase(BaseModel):
     description: Optional[str] = Field(None, max_length=2000, description="Task description")
     status: str = Field("todo", description="Task status")
     priority: str = Field("medium", description="Task priority")
+    epic_id: Optional[UUID4] = Field(None, description="Associated project epic ID")
+    story_points: Optional[int] = Field(1, description="Story point estimate")
+    checklist: Optional[List[str]] = Field(default_factory=list, description="Task checklist items")
 
     @field_validator("status")
     @classmethod
@@ -38,6 +41,9 @@ class TaskUpdate(BaseModel):
     status: Optional[str] = Field(None)
     priority: Optional[str] = Field(None)
     assignee_id: Optional[UUID4] = None
+    epic_id: Optional[UUID4] = Field(None)
+    story_points: Optional[int] = Field(None)
+    checklist: Optional[List[str]] = Field(None)
 
     @field_validator("status")
     @classmethod

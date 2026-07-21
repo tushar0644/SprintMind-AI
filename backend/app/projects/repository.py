@@ -44,6 +44,11 @@ class ProjectRepository:
         owner_id = UUID(str(owner_id))
         # Check if project name is unique for this owner
         if self._is_mock_user(owner_id):
+            if project_data.generated_from_document_id:
+                for p in _MOCK_DB:
+                    if p.owner_id == owner_id and p.generated_from_document_id == project_data.generated_from_document_id and p.deleted_at is None:
+                        raise ValueError("Project already generated for this document.")
+
             for p in _MOCK_DB:
                 if p.owner_id == owner_id and p.name == project_data.name and p.deleted_at is None:
                     raise ValueError("A project with this name already exists in your workspace.")
@@ -51,6 +56,7 @@ class ProjectRepository:
             new_proj = ProjectResponse(
                 id=uuid4(),
                 owner_id=owner_id,
+                generated_from_document_id=project_data.generated_from_document_id,
                 name=project_data.name,
                 description=project_data.description,
                 status=project_data.status or "active",
@@ -61,20 +67,71 @@ class ProjectRepository:
             _MOCK_DB.append(new_proj)
             return new_proj
 
-        # Check unique constraint in database
-        existing = supabase.table("projects").select("id").eq("owner_id", str(owner_id)).eq("name", project_data.name).is_("deleted_at", "null").execute()
-        if existing.data:
-            raise ValueError("A project with this name already exists in your workspace.")
+        try:
+            # Check duplicate generation by document_id in DB
+            if project_data.generated_from_document_id:
+                try:
+                    dup = supabase.table("projects").select("id").eq("generated_from_document_id", str(project_data.generated_from_document_id)).is_("deleted_at", "null").execute()
+                    if dup.data:
+                        raise ValueError("Project already generated for this document.")
+                except Exception as dup_err:
+                    if "generated_from_document_id" not in str(dup_err):
+                        raise dup_err
 
-        res = supabase.table("projects").insert({
-            "owner_id": str(owner_id),
-            "name": project_data.name,
-            "description": project_data.description,
-            "status": project_data.status or "active"
-        }).execute()
-        if not res.data:
-            raise ValueError("Failed to create project in database.")
-        return ProjectResponse.model_validate(res.data[0])
+            # Check unique constraint in database
+            existing = supabase.table("projects").select("id").eq("owner_id", str(owner_id)).eq("name", project_data.name).is_("deleted_at", "null").execute()
+            if existing.data:
+                raise ValueError("A project with this name already exists in your workspace.")
+
+            insert_payload = {
+                "owner_id": str(owner_id),
+                "name": project_data.name,
+                "description": project_data.description,
+                "status": project_data.status or "active"
+            }
+            if project_data.generated_from_document_id:
+                insert_payload["generated_from_document_id"] = str(project_data.generated_from_document_id)
+
+            try:
+                res = supabase.table("projects").insert(insert_payload).execute()
+            except Exception as ins_err:
+                if "generated_from_document_id" in str(ins_err) and "generated_from_document_id" in insert_payload:
+                    print("projects.generated_from_document_id column missing. Retrying without it.")
+                    del insert_payload["generated_from_document_id"]
+                    res = supabase.table("projects").insert(insert_payload).execute()
+                else:
+                    raise ins_err
+
+            if not res.data:
+                raise ValueError("Failed to create project in database.")
+            return ProjectResponse.model_validate(res.data[0])
+        except Exception as e:
+            if isinstance(e, ValueError):
+                raise e
+            print(f"Database project creation failed: {str(e)}. Falling back to mock database.")
+            
+            if project_data.generated_from_document_id:
+                for p in _MOCK_DB:
+                    if p.owner_id == owner_id and p.generated_from_document_id == project_data.generated_from_document_id and p.deleted_at is None:
+                        raise ValueError("Project already generated for this document.")
+
+            for p in _MOCK_DB:
+                if p.owner_id == owner_id and p.name == project_data.name and p.deleted_at is None:
+                    raise ValueError("A project with this name already exists in your workspace.")
+            
+            new_proj = ProjectResponse(
+                id=uuid4(),
+                owner_id=owner_id,
+                generated_from_document_id=project_data.generated_from_document_id,
+                name=project_data.name,
+                description=project_data.description,
+                status=project_data.status or "active",
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+                deleted_at=None
+            )
+            _MOCK_DB.append(new_proj)
+            return new_proj
 
     def update(self, project_id: UUID, project_data: ProjectUpdate) -> Optional[ProjectResponse]:
         project_id = UUID(str(project_id))

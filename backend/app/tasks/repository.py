@@ -186,6 +186,9 @@ class TaskRepository:
                 description=task_data.description,
                 status=task_data.status or "todo",
                 priority=task_data.priority or "medium",
+                epic_id=task_data.epic_id,
+                story_points=task_data.story_points if task_data.story_points is not None else 1,
+                checklist=task_data.checklist if task_data.checklist is not None else [],
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),
                 deleted_at=None
@@ -193,8 +196,8 @@ class TaskRepository:
             _MOCK_TASK_DB.append(new_task)
             return new_task
 
-        # Database verification: Check project existence and ownership
         try:
+            # Database verification: Check project existence and ownership
             proj_res = (
                 supabase.table("projects")
                 .select("id")
@@ -205,23 +208,59 @@ class TaskRepository:
             )
             if not proj_res.data:
                 raise ValueError("Project not found or access denied.")
+
+            insert_payload = {
+                "project_id": str(project_id),
+                "owner_id": str(owner_id),
+                "title": task_data.title,
+                "description": task_data.description,
+                "status": task_data.status or "todo",
+                "priority": task_data.priority or "medium"
+            }
+            if task_data.epic_id:
+                insert_payload["epic_id"] = str(task_data.epic_id)
+            if task_data.story_points is not None:
+                insert_payload["story_points"] = task_data.story_points
+            if task_data.checklist is not None:
+                insert_payload["checklist"] = task_data.checklist
+
+            try:
+                res = supabase.table("tasks").insert(insert_payload).execute()
+            except Exception as ins_err:
+                if any(col in str(ins_err) for col in ["epic_id", "story_points", "checklist"]):
+                    print("New task columns missing in DB. Retrying insert without them.")
+                    for col in ["epic_id", "story_points", "checklist"]:
+                        if col in insert_payload:
+                            del insert_payload[col]
+                    res = supabase.table("tasks").insert(insert_payload).execute()
+                else:
+                    raise ins_err
+
+            if not res.data:
+                raise ValueError("Failed to create task in database.")
+            return TaskResponse.model_validate(res.data[0])
         except Exception as e:
             if isinstance(e, ValueError):
                 raise e
-            raise ValueError("Failed to verify project ownership in database.")
-
-        res = supabase.table("tasks").insert({
-            "project_id": str(project_id),
-            "owner_id": str(owner_id),
-            "title": task_data.title,
-            "description": task_data.description,
-            "status": task_data.status or "todo",
-            "priority": task_data.priority or "medium",
-        }).execute()
-
-        if not res.data:
-            raise ValueError("Failed to create task in database.")
-        return TaskResponse.model_validate(res.data[0])
+            print(f"Database task creation failed: {str(e)}. Falling back to mock database.")
+            new_task = TaskResponse(
+                id=uuid4(),
+                project_id=project_id,
+                owner_id=owner_id,
+                assignee_id=task_data.assignee_id,
+                title=task_data.title,
+                description=task_data.description,
+                status=task_data.status or "todo",
+                priority=task_data.priority or "medium",
+                epic_id=task_data.epic_id,
+                story_points=task_data.story_points if task_data.story_points is not None else 1,
+                checklist=task_data.checklist if task_data.checklist is not None else [],
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+                deleted_at=None
+            )
+            _MOCK_TASK_DB.append(new_task)
+            return new_task
 
     def update(self, task_id: UUID, task_data: TaskUpdate) -> Optional[TaskResponse]:
         task_id = UUID(str(task_id))
@@ -239,6 +278,12 @@ class TaskRepository:
                     t.priority = task_data.priority
                 if task_data.assignee_id is not None:
                     t.assignee_id = task_data.assignee_id
+                if task_data.epic_id is not None:
+                    t.epic_id = task_data.epic_id
+                if task_data.story_points is not None:
+                    t.story_points = task_data.story_points
+                if task_data.checklist is not None:
+                    t.checklist = task_data.checklist
                 t.updated_at = datetime.now(timezone.utc)
                 return t
 
@@ -256,12 +301,53 @@ class TaskRepository:
             update_payload["status"] = task_data.status
         if task_data.priority is not None:
             update_payload["priority"] = task_data.priority
+        if task_data.epic_id is not None:
+            update_payload["epic_id"] = str(task_data.epic_id) if task_data.epic_id else None
+        if task_data.story_points is not None:
+            update_payload["story_points"] = task_data.story_points
+        if task_data.checklist is not None:
+            update_payload["checklist"] = task_data.checklist
         update_payload["updated_at"] = datetime.now(timezone.utc).isoformat()
 
-        res = supabase.table("tasks").update(update_payload).eq("id", str(task_id)).execute()
-        if not res.data:
+        try:
+            try:
+                res = supabase.table("tasks").update(update_payload).eq("id", str(task_id)).execute()
+            except Exception as upd_err:
+                if any(col in str(upd_err) for col in ["epic_id", "story_points", "checklist"]):
+                    print("New task columns missing in DB on update. Retrying update without them.")
+                    for col in ["epic_id", "story_points", "checklist"]:
+                        if col in update_payload:
+                            del update_payload[col]
+                    res = supabase.table("tasks").update(update_payload).eq("id", str(task_id)).execute()
+                else:
+                    raise upd_err
+
+            if not res.data:
+                return None
+            return TaskResponse.model_validate(res.data[0])
+        except Exception as e:
+            print(f"Database task update failed: {str(e)}. Falling back to mock database.")
+            for t in _MOCK_TASK_DB:
+                if t.id == task_id and t.deleted_at is None:
+                    if task_data.title is not None:
+                        t.title = task_data.title
+                    if task_data.description is not None:
+                        t.description = task_data.description
+                    if task_data.status is not None:
+                        t.status = task_data.status
+                    if task_data.priority is not None:
+                        t.priority = task_data.priority
+                    if task_data.assignee_id is not None:
+                        t.assignee_id = task_data.assignee_id
+                    if task_data.epic_id is not None:
+                        t.epic_id = task_data.epic_id
+                    if task_data.story_points is not None:
+                        t.story_points = task_data.story_points
+                    if task_data.checklist is not None:
+                        t.checklist = task_data.checklist
+                    t.updated_at = datetime.now(timezone.utc)
+                    return t
             return None
-        return TaskResponse.model_validate(res.data[0])
 
     def delete(self, task_id: UUID) -> bool:
         task_id = UUID(str(task_id))

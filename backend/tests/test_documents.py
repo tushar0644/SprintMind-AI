@@ -95,3 +95,154 @@ def test_document_crud_flow_authorized():
     proj_docs_res_after = client.get(f"/api/v1/documents/project/{project_id}")
     assert proj_docs_res_after.status_code == 200
     assert len(proj_docs_res_after.json()) == 0
+
+
+# --- Phase 2.2 Document Parsing Unit Tests ---
+from unittest.mock import MagicMock, patch
+from app.documents.parser import DocumentParserFactory, PDFParser, DocxParser, TxtParser, MarkdownParser
+
+def test_pdf_parser_success():
+    """
+    Verifies PDFParser correctly extracts text, counts, and metadata.
+    """
+    mock_reader = MagicMock()
+    mock_page = MagicMock()
+    mock_page.extract_text.return_value = "This is a sample document written in English language for test."
+    mock_reader.pages = [mock_page]
+    mock_reader.metadata.title = "Mock PDF Title"
+
+    with patch("app.documents.parser.PdfReader", return_value=mock_reader):
+        parser = DocumentParserFactory.get_parser("doc.pdf")
+        assert isinstance(parser, PDFParser)
+        res = parser.parse(b"dummy pdf content", "doc.pdf")
+        
+        assert res.content == "This is a sample document written in English language for test."
+        assert res.metadata.title == "Mock PDF Title"
+        assert res.metadata.pages == 1
+        assert res.metadata.word_count == 11
+        assert res.metadata.character_count == len(res.content)
+        assert res.metadata.language == "en"
+
+def test_docx_parser_success():
+    """
+    Verifies DocxParser correctly extracts text and metadata.
+    """
+    mock_doc = MagicMock()
+    mock_para = MagicMock()
+    mock_para.text = "This is a sample document written in English language for test."
+    mock_doc.paragraphs = [mock_para]
+    mock_doc.tables = []
+    mock_doc.core_properties.title = "Mock Docx Title"
+    mock_doc.core_properties.pages = 2
+
+    with patch("docx.Document", return_value=mock_doc):
+        parser = DocumentParserFactory.get_parser("doc.docx")
+        assert isinstance(parser, DocxParser)
+        res = parser.parse(b"dummy docx content", "doc.docx")
+        
+        assert res.content == "This is a sample document written in English language for test."
+        assert res.metadata.title == "Mock Docx Title"
+        assert res.metadata.pages == 2
+        assert res.metadata.word_count == 11
+        assert res.metadata.language == "en"
+
+def test_txt_parser_success():
+    """
+    Verifies TxtParser correctly decodes plain text and computes counts.
+    """
+    text = "First Line as Title\nSecond line of plain text content."
+    file_bytes = text.encode("utf-8")
+    
+    parser = DocumentParserFactory.get_parser("doc.txt")
+    assert isinstance(parser, TxtParser)
+    res = parser.parse(file_bytes, "doc.txt")
+    
+    assert res.content == text
+    assert res.metadata.title == "First Line as Title"
+    assert res.metadata.pages == 1
+    assert res.metadata.word_count == 10
+    assert res.metadata.language == "en"
+
+def test_markdown_parser_success():
+    """
+    Verifies MarkdownParser strips syntax, extracts header title and content.
+    """
+    md_content = """# SprintMind Markdown Guide
+Here is some **bold** and *italic* text.
+- List item 1
+- List item 2
+[SprintMind](https://sprintmind.ai)
+"""
+    file_bytes = md_content.encode("utf-8")
+    
+    parser = DocumentParserFactory.get_parser("doc.md")
+    assert isinstance(parser, MarkdownParser)
+    res = parser.parse(file_bytes, "doc.md")
+    
+    # Verify markup syntax is stripped
+    assert "SprintMind Markdown Guide" in res.content
+    assert "**" not in res.content
+    assert "*" not in res.content
+    assert "[SprintMind]" not in res.content
+    assert "List item 1" in res.content
+    
+    # Metadata assertions
+    assert res.metadata.title == "SprintMind Markdown Guide"
+    assert res.metadata.pages == 1
+    assert res.metadata.language == "en"
+
+def test_parser_unsupported_file():
+    """
+    Verifies factory raises ValueError for unsupported formats.
+    """
+    with pytest.raises(ValueError) as exc:
+        DocumentParserFactory.get_parser("doc.xlsx")
+    assert "Unsupported file format" in str(exc.value)
+
+def test_parser_empty_document():
+    """
+    Verifies all parsers return empty content and correct fallbacks for empty files.
+    """
+    pdf_res = PDFParser().parse(b"", "empty.pdf")
+    assert pdf_res.content == ""
+    assert pdf_res.metadata.pages == 0
+    assert pdf_res.metadata.word_count == 0
+    assert pdf_res.metadata.title == "empty.pdf"
+
+    docx_res = DocxParser().parse(b"", "empty.docx")
+    assert docx_res.content == ""
+    assert docx_res.metadata.pages == 0
+    assert docx_res.metadata.word_count == 0
+
+    txt_res = TxtParser().parse(b"", "empty.txt")
+    assert txt_res.content == ""
+    assert txt_res.metadata.pages == 1
+    assert txt_res.metadata.word_count == 0
+
+    md_res = MarkdownParser().parse(b"", "empty.md")
+    assert md_res.content == ""
+    assert md_res.metadata.pages == 1
+    assert md_res.metadata.word_count == 0
+
+def test_language_detection():
+    """
+    Verifies language stopword heuristic for English, Spanish, German, French.
+    """
+    parser = TxtParser()
+    
+    # English
+    en_text = "the and of to in that have it for not on with he as you do at"
+    assert parser.detect_language(en_text) == "en"
+    
+    # Spanish
+    es_text = "el la los las de en que y o no se con por para como"
+    assert parser.detect_language(es_text) == "es"
+    
+    # German
+    de_text = "der die das und ist in zu den von mit ein eine"
+    assert parser.detect_language(de_text) == "de"
+    
+    # French
+    fr_text = "le la les un une des de et en que est dans pour par"
+    assert parser.detect_language(fr_text) == "fr"
+

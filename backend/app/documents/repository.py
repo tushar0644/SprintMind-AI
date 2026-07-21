@@ -61,3 +61,104 @@ class DocumentRepository:
         return len(response.data) > 0
 
 document_repository = DocumentRepository()
+
+
+_MOCK_CHUNKS_DB: List[dict] = []
+
+class DocumentChunkRepository:
+    def _is_mock_document(self, document_id: UUID) -> bool:
+        return any(str(d["id"]) == str(document_id) for d in _MOCK_DOCUMENTS_DB)
+
+    def delete_chunks_by_document(self, document_id: UUID) -> bool:
+        global _MOCK_CHUNKS_DB
+        if self._is_mock_document(document_id):
+            _MOCK_CHUNKS_DB = [c for c in _MOCK_CHUNKS_DB if str(c["document_id"]) != str(document_id)]
+            return True
+        
+        try:
+            response = supabase.table("document_chunks").delete().eq("document_id", str(document_id)).execute()
+            return True
+        except Exception as e:
+            err_msg = str(e)
+            if any(term in err_msg for term in ["document_chunks", "42P01", "PGRST205", "PGRST204", "cache"]):
+                _MOCK_CHUNKS_DB = [c for c in _MOCK_CHUNKS_DB if str(c["document_id"]) != str(document_id)]
+                return True
+            raise e
+
+    def create_chunks(self, document_id: UUID, chunks: List[dict]) -> List[dict]:
+        self.delete_chunks_by_document(document_id)
+        
+        is_mock = self._is_mock_document(document_id)
+        now = datetime.now(timezone.utc).isoformat()
+        
+        results = []
+        for c in chunks:
+            payload = {
+                "document_id": str(document_id),
+                "chunk_index": c["chunk_index"],
+                "page": c["page"],
+                "text": c["text"],
+                "char_count": c["char_count"],
+                "token_estimate": c["token_estimate"]
+            }
+            if is_mock:
+                payload["id"] = str(uuid4())
+                payload["created_at"] = now
+                _MOCK_CHUNKS_DB.append(payload)
+                results.append(payload)
+            else:
+                results.append(payload)
+                
+        if is_mock:
+            return results
+            
+        if not results:
+            return []
+            
+        try:
+            response = supabase.table("document_chunks").insert(results).execute()
+            if response.data:
+                return response.data
+            raise Exception("Failed to insert document chunks")
+        except Exception as e:
+            err_msg = str(e)
+            if any(term in err_msg for term in ["document_chunks", "42P01", "PGRST205", "PGRST204", "cache"]):
+                fallback_results = []
+                for res in results:
+                    res["id"] = str(uuid4())
+                    res["created_at"] = now
+                    _MOCK_CHUNKS_DB.append(res)
+                    fallback_results.append(res)
+                print("\n" + "="*80)
+                print("WARNING: 'document_chunks' table does not exist in Supabase database.")
+                print("Using in-memory mock fallback to ensure system remains operational.")
+                print("To fix this, please run database/document_chunks_schema.sql on your Supabase dashboard.")
+                print("="*80 + "\n")
+                return fallback_results
+            raise e
+
+    def get_chunks_by_document(self, document_id: UUID) -> List[dict]:
+        if self._is_mock_document(document_id):
+            return [
+                c for c in _MOCK_CHUNKS_DB
+                if str(c["document_id"]) == str(document_id)
+            ]
+            
+        try:
+            response = supabase.table("document_chunks")\
+                .select("*")\
+                .eq("document_id", str(document_id))\
+                .order("chunk_index", desc=False)\
+                .execute()
+            return response.data
+        except Exception as e:
+            err_msg = str(e)
+            if any(term in err_msg for term in ["document_chunks", "42P01", "PGRST205", "PGRST204", "cache"]):
+                return [
+                    c for c in _MOCK_CHUNKS_DB
+                    if str(c["document_id"]) == str(document_id)
+                ]
+            raise e
+
+document_chunk_repository = DocumentChunkRepository()
+

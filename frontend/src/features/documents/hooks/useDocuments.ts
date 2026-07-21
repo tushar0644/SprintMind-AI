@@ -9,6 +9,7 @@ export const useDocuments = (projectId: string) => {
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isChunking, setIsChunking] = useState(false);
 
   const fetchDocuments = useCallback(async () => {
     if (!projectId) {
@@ -72,6 +73,32 @@ export const useDocuments = (projectId: string) => {
     }
   };
 
+  const chunkDocument = async (
+    documentId: string,
+    maxChunkSize?: number,
+    minChunkSize?: number,
+    overlap?: number
+  ) => {
+    setIsChunking(true);
+    setDocuments((prev) =>
+      prev.map((d) =>
+        d.id === documentId
+          ? { ...d, processing_status: 'Processing...' }
+          : d
+      )
+    );
+    try {
+      await documentService.chunkDocument(documentId, maxChunkSize, minChunkSize, overlap);
+      await fetchDocuments();
+    } catch (err: any) {
+      setError(err.message || 'Failed to process semantic chunks');
+      await fetchDocuments();
+      throw err;
+    } finally {
+      setIsChunking(false);
+    }
+  };
+
   return {
     documents,
     isLoading,
@@ -80,6 +107,8 @@ export const useDocuments = (projectId: string) => {
     isUploading,
     deleteFile,
     isDeleting,
+    chunkDocument,
+    isChunking,
     refresh: fetchDocuments
   };
 };

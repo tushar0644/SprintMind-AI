@@ -119,3 +119,40 @@ async def delete_project(
             detail="Project not found."
         )
     return
+
+
+@router.get("/{project_id}/generated")
+async def get_generated_project_summary(
+    project_id: UUID,
+    current_user = Depends(get_current_user),
+    service: ProjectService = Depends(get_project_service)
+):
+    """
+    Get generation metrics/summary counts for a generated project by ID.
+    """
+    user_id = getattr(current_user, "id", None) or current_user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    # Verify project exists and belongs to owner
+    project = service.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    if str(project.owner_id) != str(user_id):
+        raise HTTPException(status_code=403, detail="Access denied.")
+
+    # Get epics count and tasks count
+    from app.ai.project_generator import get_project_epics
+    from app.tasks.repository import TaskRepository
+    
+    epics = get_project_epics(project_id)
+    task_repo = TaskRepository()
+    tasks, _ = task_repo.list_tasks(owner_id=UUID(str(user_id)), project_id=project_id)
+
+    return {
+        "project_id": str(project_id),
+        "project_name": project.name,
+        "epics_count": len(epics),
+        "tasks_count": len(tasks)
+    }
+

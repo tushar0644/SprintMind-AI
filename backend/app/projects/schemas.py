@@ -15,7 +15,7 @@ class ProjectBase(BaseModel):
         return v
 
 class ProjectCreate(ProjectBase):
-    pass
+    generated_from_document_id: Optional[UUID4] = None
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=3, max_length=100)
@@ -32,6 +32,7 @@ class ProjectUpdate(BaseModel):
 class ProjectResponse(ProjectBase):
     id: UUID4
     owner_id: UUID4
+    generated_from_document_id: Optional[UUID4] = None
     created_at: datetime
     updated_at: datetime
     deleted_at: Optional[datetime] = None

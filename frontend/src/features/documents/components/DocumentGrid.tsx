@@ -8,6 +8,7 @@ interface DocumentGridProps {
   isLoading: boolean;
   onPreview: (doc: Document) => void;
   onDelete: (id: string) => Promise<void>;
+  onChunk?: (id: string) => Promise<void>;
   searchQuery: string;
 }
 
@@ -16,6 +17,7 @@ export const DocumentGrid: React.FC<DocumentGridProps> = ({
   isLoading, 
   onPreview, 
   onDelete,
+  onChunk,
   searchQuery
 }) => {
   if (isLoading) {
@@ -50,6 +52,7 @@ export const DocumentGrid: React.FC<DocumentGridProps> = ({
           document={doc} 
           onPreview={onPreview} 
           onDelete={onDelete} 
+          onChunk={onChunk}
         />
       ))}
     </div>

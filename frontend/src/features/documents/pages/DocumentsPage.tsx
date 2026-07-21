@@ -24,7 +24,8 @@ export const DocumentsPage: React.FC = () => {
     isLoading: documentsLoading, 
     error, 
     uploadFile, 
-    deleteFile 
+    deleteFile,
+    chunkDocument
   } = useDocuments(selectedProjectId);
 
   const [previewDocument, setPreviewDocument] = useState<Document | null>(null);
@@ -245,6 +246,7 @@ export const DocumentsPage: React.FC = () => {
             isLoading={documentsLoading}
             onPreview={setPreviewDocument}
             onDelete={deleteFile}
+            onChunk={chunkDocument}
             searchQuery={searchQuery}
           />
         </div>
