@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 from datetime import datetime, timezone
 from pydantic import BaseModel, Field, UUID4
 
-# Mock DB for epics fallback
+# In-memory database for epics, used exclusively for mock/test documents.
 _MOCK_EPICS_DB: List[dict] = []
 
 class EpicCreate(BaseModel):
@@ -33,15 +33,9 @@ def get_epics(document_id: UUID) -> List[dict]:
     if is_mock:
         return [item for item in _MOCK_EPICS_DB if str(item["document_id"]) == str(document_id)]
 
-    try:
-        from app.database.client import supabase
-        res = supabase.table("document_epics").select("*").eq("document_id", str(document_id)).execute()
-        return res.data or []
-    except Exception as e:
-        err_msg = str(e)
-        if any(term in err_msg for term in ["document_epics", "42P01", "PGRST205", "PGRST204", "cache"]):
-            return [item for item in _MOCK_EPICS_DB if str(item["document_id"]) == str(document_id)]
-        raise e
+    from app.database.client import supabase
+    res = supabase.table("document_epics").select("*").eq("document_id", str(document_id)).execute()
+    return res.data or []
 
 
 def save_epic(document_id: UUID, title: str, description: Optional[str] = None) -> dict:
@@ -61,22 +55,13 @@ def save_epic(document_id: UUID, title: str, description: Optional[str] = None) 
         _MOCK_EPICS_DB.append(payload)
         return payload
 
-    try:
-        from app.database.client import supabase
-        payload["id"] = str(uuid4())
-        payload["created_at"] = now
-        insert_res = supabase.table("document_epics").insert(payload).execute()
-        if insert_res.data:
-            return insert_res.data[0]
-        raise Exception("Failed to insert epic")
-    except Exception as e:
-        err_msg = str(e)
-        if any(term in err_msg for term in ["document_epics", "42P01", "PGRST205", "PGRST204", "cache"]):
-            payload["id"] = str(uuid4())
-            payload["created_at"] = now
-            _MOCK_EPICS_DB.append(payload)
-            return payload
-        raise e
+    from app.database.client import supabase
+    payload["id"] = str(uuid4())
+    payload["created_at"] = now
+    insert_res = supabase.table("document_epics").insert(payload).execute()
+    if insert_res.data:
+        return insert_res.data[0]
+    raise Exception("Failed to insert epic")
 
 
 def delete_epics_by_document(document_id: UUID) -> bool:
@@ -91,13 +76,6 @@ def delete_epics_by_document(document_id: UUID) -> bool:
         _MOCK_EPICS_DB = [item for item in _MOCK_EPICS_DB if str(item["document_id"]) != str(document_id)]
         return True
 
-    try:
-        from app.database.client import supabase
-        supabase.table("document_epics").delete().eq("document_id", str(document_id)).execute()
-        return True
-    except Exception as e:
-        err_msg = str(e)
-        if any(term in err_msg for term in ["document_epics", "42P01", "PGRST205", "PGRST204", "cache"]):
-            _MOCK_EPICS_DB = [item for item in _MOCK_EPICS_DB if str(item["document_id"]) != str(document_id)]
-            return True
-        raise e
+    from app.database.client import supabase
+    supabase.table("document_epics").delete().eq("document_id", str(document_id)).execute()
+    return True

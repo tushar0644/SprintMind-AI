@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 from datetime import datetime, timezone
 from pydantic import BaseModel, Field, UUID4
 
-# Mock DB for requirements fallback
+# In-memory database for requirements, used exclusively for mock/test documents.
 _MOCK_REQUIREMENTS_DB: List[dict] = []
 
 class RequirementsExtractionJSON(BaseModel):
@@ -44,20 +44,11 @@ def get_requirements(document_id: UUID) -> Optional[dict]:
                 return item
         return None
 
-    try:
-        from app.database.client import supabase
-        res = supabase.table("document_requirements").select("*").eq("document_id", str(document_id)).execute()
-        if res.data:
-            return res.data[0]
-        return None
-    except Exception as e:
-        err_msg = str(e)
-        if any(term in err_msg for term in ["document_requirements", "42P01", "PGRST205", "PGRST204", "cache"]):
-            for item in _MOCK_REQUIREMENTS_DB:
-                if str(item["document_id"]) == str(document_id):
-                    return item
-            return None
-        raise e
+    from app.database.client import supabase
+    res = supabase.table("document_requirements").select("*").eq("document_id", str(document_id)).execute()
+    if res.data:
+        return res.data[0]
+    return None
 
 
 def save_requirements(document_id: UUID, req_data: dict) -> dict:
@@ -87,30 +78,15 @@ def save_requirements(document_id: UUID, req_data: dict) -> dict:
         _MOCK_REQUIREMENTS_DB.append(payload)
         return payload
 
-    try:
-        from app.database.client import supabase
-        res = supabase.table("document_requirements").select("*").eq("document_id", str(document_id)).execute()
-        if res.data:
-            payload["id"] = res.data[0]["id"]
-            payload["created_at"] = res.data[0]["created_at"]
-            update_res = supabase.table("document_requirements").update(payload).eq("document_id", str(document_id)).execute()
-            return update_res.data[0]
-        else:
-            payload["id"] = str(uuid4())
-            payload["created_at"] = now
-            insert_res = supabase.table("document_requirements").insert(payload).execute()
-            return insert_res.data[0]
-    except Exception as e:
-        err_msg = str(e)
-        if any(term in err_msg for term in ["document_requirements", "42P01", "PGRST205", "PGRST204", "cache"]):
-            for idx, item in enumerate(_MOCK_REQUIREMENTS_DB):
-                if str(item["document_id"]) == str(document_id):
-                    payload["id"] = item["id"]
-                    payload["created_at"] = item["created_at"]
-                    _MOCK_REQUIREMENTS_DB[idx] = payload
-                    return payload
-            payload["id"] = str(uuid4())
-            payload["created_at"] = now
-            _MOCK_REQUIREMENTS_DB.append(payload)
-            return payload
-        raise e
+    from app.database.client import supabase
+    res = supabase.table("document_requirements").select("*").eq("document_id", str(document_id)).execute()
+    if res.data:
+        payload["id"] = res.data[0]["id"]
+        payload["created_at"] = res.data[0]["created_at"]
+        update_res = supabase.table("document_requirements").update(payload).eq("document_id", str(document_id)).execute()
+        return update_res.data[0]
+    else:
+        payload["id"] = str(uuid4())
+        payload["created_at"] = now
+        insert_res = supabase.table("document_requirements").insert(payload).execute()
+        return insert_res.data[0]
