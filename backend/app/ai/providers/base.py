@@ -29,8 +29,11 @@ class AIProvider(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def health_check(self) -> bool:
-        """Verify API connectivity, credentials, and model health."""
+    def health_check(self) -> Dict[str, Any]:
+        """
+        Verify API connectivity, credentials, and model health.
+        Returns dictionary with keys: available (bool), provider (str), model (str), latency (float), error (Optional[str]).
+        """
         pass
 
     @abc.abstractmethod

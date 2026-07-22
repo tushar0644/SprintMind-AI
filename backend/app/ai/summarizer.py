@@ -41,7 +41,9 @@ class DocumentSummarizer:
         if not text_content or not text_content.strip():
             raise ValueError("Document content is empty")
 
-        enabled = getattr(self.ai_service, "enabled", False) or self.provider.health_check()
+        health = self.provider.health_check()
+        provider_enabled = health.get("available", False) if isinstance(health, dict) else bool(health)
+        enabled = getattr(self.ai_service, "enabled", False) or provider_enabled
         prompt = DOCUMENT_ANALYSIS_PROMPT.format(content=text_content)
 
         if not enabled:

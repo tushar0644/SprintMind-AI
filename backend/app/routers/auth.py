@@ -1,3 +1,4 @@
+from typing import cast
 from fastapi import APIRouter, Depends, HTTPException, status
 from app.schemas.auth import (
     UserProfileResponse, 
@@ -84,7 +85,7 @@ async def login(request: UserLoginRequest):
             "updated_at": res.user.updated_at
         }
     else:
-        profile = profile_response.data[0]
+        profile = cast(dict, profile_response.data[0])
         
     return LoginResponse(
         session=SessionResponse(
@@ -168,7 +169,7 @@ async def verify_otp(request: VerifyOtpRequest):
             "updated_at": "2026-07-11T12:00:00Z"
         }
     else:
-        profile = profile_response.data[0]
+        profile = cast(dict, profile_response.data[0])
 
     return LoginResponse(
         session=SessionResponse(

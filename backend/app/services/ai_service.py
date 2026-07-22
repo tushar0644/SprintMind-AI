@@ -1,5 +1,5 @@
 import abc
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from app.ai.providers import ProviderFactory, AIProvider, AIProviderError
 
 class AIService(abc.ABC):
@@ -30,20 +30,18 @@ class AIService(abc.ABC):
 
 class StandardAIService(AIService):
     """
-    Standard AIService implementation consuming the configured AIProvider (Phase 1.2).
+    Standard AIService implementation consuming the configured AIProvider interface.
     """
 
-    def __init__(self, provider: AIProvider = None):
+    def __init__(self, provider: Optional[AIProvider] = None):
         self.provider = provider or ProviderFactory.get_provider()
 
     @property
     def enabled(self) -> bool:
-        return self.provider.health_check()
+        health = self.provider.health_check()
+        return health.get("available", False) if isinstance(health, dict) else bool(health)
 
-    def _call_gemini(self, prompt: str, system_fallback: str) -> str:
-        """
-        Backward-compatible transport helper delegating execution to the configured AIProvider.
-        """
+    def _generate_with_fallback(self, prompt: str) -> str:
         if not self.enabled:
             return f"[Mock Gemini Mode] mock response for prompt: {prompt[:60]}..."
         try:
@@ -59,7 +57,7 @@ class StandardAIService(AIService):
             f"following context:\n\n{project_context}\n\nObjectives:\n\n{objectives}\n\nInclude a list of "
             f"suggested sprint tasks, duration, estimates, and risk mitigations."
         )
-        return self._call_gemini(prompt, "Sprint plan fallback")
+        return self._generate_with_fallback(prompt)
 
     def analyze_project_health(self, project_details: str, tasks: List[Dict[str, Any]]) -> str:
         task_summary = "\n".join([f"- {t.get('title')} ({t.get('status')})" for t in tasks])
@@ -68,7 +66,7 @@ class StandardAIService(AIService):
             f"{project_details}\n\nTask list:\n{task_summary}\n\nIdentify bottlenecks, task density, status "
             f"distribution, and suggest corrective actions."
         )
-        return self._call_gemini(prompt, "Project health analysis fallback")
+        return self._generate_with_fallback(prompt)
 
     def prioritize_tasks(self, tasks: List[Dict[str, Any]]) -> str:
         task_summary = "\n".join([f"- ID: {t.get('id')}, Title: {t.get('title')}, Priority: {t.get('priority')}" for t in tasks])
@@ -76,14 +74,14 @@ class StandardAIService(AIService):
             f"As a product owner AI, evaluate and prioritize the following backlog tasks:\n\n"
             f"{task_summary}\n\nRank them according to urgency/importance, and explain the reasoning."
         )
-        return self._call_gemini(prompt, "Task prioritization fallback")
+        return self._generate_with_fallback(prompt)
 
     def summarize_meeting_notes(self, transcript: str) -> str:
         prompt = (
             f"Summarize the following meeting notes and transcribe action items, owners, and decisions "
             f"from the raw text:\n\n{transcript}"
         )
-        return self._call_gemini(prompt, "Meeting notes summary fallback")
+        return self._generate_with_fallback(prompt)
 
     def generate_daily_standup(self, completed: List[str], planned: List[str], blockers: List[str]) -> str:
         completed_str = "\n".join([f"- {c}" for c in completed])
@@ -93,18 +91,15 @@ class StandardAIService(AIService):
             f"Structure a professional, clean Daily Standup update message from the following logs:\n\n"
             f"Yesterday:\n{completed_str}\n\nToday's Plan:\n{planned_str}\n\nBlockers:\n{blockers_str}"
         )
-        return self._call_gemini(prompt, "Daily standup report fallback")
+        return self._generate_with_fallback(prompt)
 
     def analyze_risks(self, project_scope: str, timeline: str) -> str:
         prompt = (
             f"Assess the timeline, scope creep, resource constraints, and risk vectors for the following:\n\n"
             f"Scope:\n{project_scope}\n\nTimeline:\n{timeline}\n\nProvide likelihood, impact, and mitigation strategies."
         )
-        return self._call_gemini(prompt, "Risk analysis fallback")
+        return self._generate_with_fallback(prompt)
 
-
-# Backward compatibility class alias
-GeminiProvider = StandardAIService
 
 _service_instance = StandardAIService()
 

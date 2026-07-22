@@ -63,6 +63,18 @@ class Settings(BaseSettings):
         default="gemini",
         description="Selected AI provider architecture name"
     )
+    AI_MODEL: str = Field(
+        default="gemini-1.5-flash",
+        description="Default AI model name"
+    )
+    AI_TIMEOUT: float = Field(
+        default=30.0,
+        description="AI provider request timeout in seconds"
+    )
+    AI_MAX_RETRIES: int = Field(
+        default=3,
+        description="AI provider maximum retry attempts"
+    )
 
 
     # Configuration loading definitions
