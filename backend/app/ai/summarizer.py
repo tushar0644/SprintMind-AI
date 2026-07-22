@@ -1,12 +1,14 @@
 import json
 import re
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+from app.ai.providers import ProviderFactory, AIProvider, AIProviderError
 from app.services.ai_service import get_ai_service
 from .prompts import DOCUMENT_ANALYSIS_PROMPT
 from .models import DocumentAnalysisJSON
 
 class DocumentSummarizer:
-    def __init__(self):
+    def __init__(self, provider: Optional[AIProvider] = None):
+        self.provider = provider or ProviderFactory.get_provider()
         self.ai_service = get_ai_service()
 
     def _get_mock_analysis(self) -> Dict[str, Any]:
@@ -36,42 +38,30 @@ class DocumentSummarizer:
         }
 
     def summarize_content(self, text_content: str) -> Dict[str, Any]:
-        # If text content is empty or short, raise error
         if not text_content or not text_content.strip():
             raise ValueError("Document content is empty")
 
-        # 1. Check if mock mode is active (we can inspect if uvicorn is running mock or ai_service is disabled)
-        # Note: Even if enabled is true, we want a reliable mock fallback in tests.
-        enabled = getattr(self.ai_service, "enabled", False)
-        
+        enabled = getattr(self.ai_service, "enabled", False) or self.provider.health_check()
         prompt = DOCUMENT_ANALYSIS_PROMPT.format(content=text_content)
-        
+
         if not enabled:
             return self._get_mock_analysis()
 
-        # 2. Call Gemini
         try:
-            # We can invoke _call_gemini helper directly or bypass
-            raw_response = getattr(self.ai_service, "_call_gemini")(prompt, "fallback")
-            
-            # Check if it returned a mock response prefix
-            if raw_response.startswith("[Mock Gemini Mode]"):
+            raw_response = self.provider.generate(prompt)
+
+            if raw_response.startswith("[Mock Gemini Mode]") or raw_response.startswith("[Mock Gemini Provider]"):
                 return self._get_mock_analysis()
-                
-            # 3. Clean markdown wrappers
+
             cleaned = raw_response.strip()
-            # Remove ```json and ``` codeblocks if present
             cleaned = re.sub(r"^```(?:json)?", "", cleaned, flags=re.MULTILINE)
             cleaned = re.sub(r"```$", "", cleaned, flags=re.MULTILINE)
             cleaned = cleaned.strip()
 
             parsed = json.loads(cleaned)
-            # Validate structure minimally
             validated = DocumentAnalysisJSON(**parsed)
             return validated.model_dump()
-        except Exception as e:
-            # On parse error or call failure, fallback to mock analysis if we are in testing/mock environments,
-            # or return mock summary to guarantee robustness
+        except (AIProviderError, json.JSONDecodeError, Exception) as e:
             print(f"Summarizer failed: {str(e)}. Falling back to mock summary.")
             return self._get_mock_analysis()
 

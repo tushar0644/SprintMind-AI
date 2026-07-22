@@ -1,6 +1,7 @@
 import json
 import re
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+from app.ai.providers import ProviderFactory, AIProvider, AIProviderError
 from app.services.ai_service import get_ai_service
 from app.ai.validators import validate_requirements_dict
 from app.ai.requirements import RequirementsExtractionJSON
@@ -25,7 +26,8 @@ Document Content:
 
 
 class RequirementsExtractor:
-    def __init__(self):
+    def __init__(self, provider: Optional[AIProvider] = None):
+        self.provider = provider or ProviderFactory.get_provider()
         self.ai_service = get_ai_service()
 
     def _get_mock_requirements(self) -> Dict[str, Any]:
@@ -61,35 +63,31 @@ class RequirementsExtractor:
         if not text_content or not text_content.strip():
             raise ValueError("Document content is empty")
 
-        enabled = getattr(self.ai_service, "enabled", False)
+        enabled = getattr(self.ai_service, "enabled", False) or self.provider.health_check()
         if not enabled:
             return self._get_mock_requirements()
 
         prompt = REQUIREMENTS_EXTRACTION_PROMPT.format(content=text_content)
 
         try:
-            raw_response = getattr(self.ai_service, "_call_gemini")(prompt, "fallback")
-            
-            # Check if it returned a mock response prefix
-            if raw_response.startswith("[Mock Gemini Mode]"):
+            raw_response = self.provider.generate(prompt)
+
+            if raw_response.startswith("[Mock Gemini Mode]") or raw_response.startswith("[Mock Gemini Provider]"):
                 return self._get_mock_requirements()
 
-            # Clean markdown wrappers
             cleaned = raw_response.strip()
             cleaned = re.sub(r"^```(?:json)?", "", cleaned, flags=re.MULTILINE)
             cleaned = re.sub(r"```$", "", cleaned, flags=re.MULTILINE)
             cleaned = cleaned.strip()
 
             parsed = json.loads(cleaned)
-            
-            # Validate dict format
+
             if not validate_requirements_dict(parsed):
-                # Attempt to patch minimal values if some keys are missing or invalid
                 validated = RequirementsExtractionJSON(**parsed)
                 return validated.model_dump()
 
             return parsed
-        except Exception as e:
+        except (AIProviderError, json.JSONDecodeError, Exception) as e:
             print(f"RequirementsExtractor failed: {str(e)}. Falling back to mock requirements.")
             return self._get_mock_requirements()
 

@@ -1,8 +1,9 @@
 import json
 import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from uuid import UUID
 
+from app.ai.providers import ProviderFactory, AIProvider, AIProviderError
 from app.services.ai_service import get_ai_service
 from .epics import save_epic, get_epics, delete_epics_by_document
 from .stories import save_story, get_stories
@@ -51,7 +52,8 @@ Structured Requirements:
 
 
 class StoryPlanner:
-    def __init__(self):
+    def __init__(self, provider: Optional[AIProvider] = None):
+        self.provider = provider or ProviderFactory.get_provider()
         self.ai_service = get_ai_service()
 
     def _get_mock_epics_and_stories(self) -> Dict[str, Any]:
@@ -123,17 +125,17 @@ class StoryPlanner:
                 from app.documents.schemas import ChunkConfiguration
                 await document_service.chunk_document(document_id, ChunkConfiguration())
                 chunks = document_chunk_repository.get_chunks_by_document(document_id)
-            
+
             if not chunks:
                 raise ValueError("Document has no text content to extract requirements from")
-                
+
             combined_text = "\n\n".join([c["text"] for c in chunks])
             extracted_reqs = requirements_extractor.extract_requirements(combined_text)
             reqs = save_requirements(document_id, extracted_reqs)
 
-        # 2. Call Gemini to generate stories
-        enabled = getattr(self.ai_service, "enabled", False)
-        
+        # 2. Call AI provider to generate stories
+        enabled = getattr(self.ai_service, "enabled", False) or self.provider.health_check()
+
         reqs_clean = {
             "functional_requirements": reqs.get("functional_requirements", []),
             "non_functional_requirements": reqs.get("non_functional_requirements", []),
@@ -149,25 +151,23 @@ class StoryPlanner:
             generated_data = self._get_mock_epics_and_stories()
         else:
             try:
-                raw_response = getattr(self.ai_service, "_call_gemini")(prompt, "fallback")
-                
-                # Check if it returned a mock response prefix
-                if raw_response.startswith("[Mock Gemini Mode]"):
+                raw_response = self.provider.generate(prompt)
+
+                if raw_response.startswith("[Mock Gemini Mode]") or raw_response.startswith("[Mock Gemini Provider]"):
                     generated_data = self._get_mock_epics_and_stories()
                 else:
-                    # Clean markdown wrappers
                     cleaned = raw_response.strip()
                     cleaned = re.sub(r"^```(?:json)?", "", cleaned, flags=re.MULTILINE)
                     cleaned = re.sub(r"```$", "", cleaned, flags=re.MULTILINE)
                     cleaned = cleaned.strip()
                     generated_data = json.loads(cleaned)
-            except Exception as e:
+            except (AIProviderError, json.JSONDecodeError, Exception) as e:
                 print(f"StoryPlanner failed: {str(e)}. Falling back to mock epics/stories.")
                 generated_data = self._get_mock_epics_and_stories()
 
         # 3. Cascadingly persist Epics and Stories
         delete_epics_by_document(document_id)
-        
+
         epics_list = generated_data.get("epics", [])
         for epic in epics_list:
             epic_db = save_epic(
@@ -193,8 +193,7 @@ class StoryPlanner:
     def get_nested_epics_and_stories(self, document_id: UUID) -> List[Dict[str, Any]]:
         epics = get_epics(document_id)
         stories = get_stories(document_id)
-        
-        # Group stories by epic_id
+
         stories_by_epic = {}
         for s in stories:
             epic_id_str = str(s["epic_id"])
@@ -202,14 +201,13 @@ class StoryPlanner:
                 stories_by_epic[epic_id_str] = []
             stories_by_epic[epic_id_str].append(s)
 
-        # Nest stories inside epics
         result = []
         for e in epics:
             epic_copy = dict(e)
             epic_id_str = str(e["id"])
             epic_copy["stories"] = stories_by_epic.get(epic_id_str, [])
             result.append(epic_copy)
-            
+
         return result
 
 

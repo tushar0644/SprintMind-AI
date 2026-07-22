@@ -1,7 +1,6 @@
 import abc
 from typing import List, Dict, Any
-import google.generativeai as genai
-from app.core.config import settings
+from app.ai.providers import ProviderFactory, AIProvider, AIProviderError
 
 class AIService(abc.ABC):
     @abc.abstractmethod
@@ -29,24 +28,28 @@ class AIService(abc.ABC):
         pass
 
 
-class GeminiProvider(AIService):
-    def __init__(self):
-        self.enabled = False
-        api_key = settings.GEMINI_API_KEY
-        if api_key and api_key != "dummy-gemini-key":
-            try:
-                genai.configure(api_key=api_key)
-                self.model = genai.GenerativeModel("gemini-1.5-flash")
-                self.enabled = True
-            except Exception:
-                self.enabled = False
+class StandardAIService(AIService):
+    """
+    Standard AIService implementation consuming the configured AIProvider (Phase 1.2).
+    """
+
+    def __init__(self, provider: AIProvider = None):
+        self.provider = provider or ProviderFactory.get_provider()
+
+    @property
+    def enabled(self) -> bool:
+        return self.provider.health_check()
 
     def _call_gemini(self, prompt: str, system_fallback: str) -> str:
+        """
+        Backward-compatible transport helper delegating execution to the configured AIProvider.
+        """
         if not self.enabled:
             return f"[Mock Gemini Mode] mock response for prompt: {prompt[:60]}..."
         try:
-            response = self.model.generate_content(prompt)
-            return response.text
+            return self.provider.generate(prompt)
+        except AIProviderError as e:
+            return f"[Mock Gemini Mode (Fallback due to error: {str(e)})] mock response for: {prompt[:60]}..."
         except Exception as e:
             return f"[Mock Gemini Mode (Fallback due to error: {str(e)})] mock response for: {prompt[:60]}..."
 
@@ -100,7 +103,10 @@ class GeminiProvider(AIService):
         return self._call_gemini(prompt, "Risk analysis fallback")
 
 
-_service_instance = GeminiProvider()
+# Backward compatibility class alias
+GeminiProvider = StandardAIService
+
+_service_instance = StandardAIService()
 
 def get_ai_service() -> AIService:
     return _service_instance

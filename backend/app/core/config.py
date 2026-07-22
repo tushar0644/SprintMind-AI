@@ -59,6 +59,11 @@ class Settings(BaseSettings):
         default="dummy-gemini-key",
         description="Google Gemini AI developer credentials api key"
     )
+    AI_PROVIDER: str = Field(
+        default="gemini",
+        description="Selected AI provider architecture name"
+    )
+
 
     # Configuration loading definitions
     model_config = SettingsConfigDict(
